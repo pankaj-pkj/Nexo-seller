@@ -1,0 +1,53 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Import this repo as a Blueprint and Render creates the service for you.
+# Every value below marked sync:false must be filled in from the dashboard.
+services:
+  - type: web
+    name: nexapi-gateway
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+
+      # Firebase service account
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+      # Upstream API being resold
+      - key: REAL_API_KEY_1
+        sync: false
+      - key: REAL_API_BASE_URL_1
+        sync: false
+      - key: REAL_API_PATH_1
+        value: /admin/paid/key
+
+      # Heleket
+      - key: HELEKET_MERCHANT
+        sync: false
+      - key: HELEKET_API_KEY
+        sync: false
+      - key: HELEKET_BASE_URL
+        value: https://api.heleket.com
+
+      # URLs — set after the first deploy, once you know the hostnames
+      - key: BACKEND_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: HELEKET_RETURN
+        sync: false
+      - key: RENDER_URL
+        sync: false
+
+      # Admin panel password
+      - key: ADMIN_SECRET
+        generateValue: true

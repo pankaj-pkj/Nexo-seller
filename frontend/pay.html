@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NexAPI — Payment Status</title>
+<meta name="description" content="Confirming your USDT payment and issuing your NexAPI key.">
+<meta name="theme-color" content="#04060D">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+/* The original locked the body with overflow:hidden, which clipped the success
+   card on short screens. Scroll is allowed; the card just centres itself. */
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:90px 20px 40px}
+.ab1{width:50vw;height:50vw;background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 70%);top:-15vw;left:-10vw}
+.ab2{width:40vw;height:40vw;background:radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%);bottom:-10vw;right:-5vw;animation-direction:alternate-reverse;animation-duration:25s}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:flex;align-items:center;gap:12px;background:rgba(4,6,13,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--b1)}
+.card{position:relative;z-index:2;background:var(--card);border:1px solid var(--b2);border-radius:26px;padding:48px 42px;width:100%;max-width:500px;text-align:center;animation:rise .6s cubic-bezier(.34,1.2,.64,1) both}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad);border-radius:26px 26px 0 0}
+.state{display:none}.state.active{display:block}
+
+/* Orb spinner */
+.orb-wrap{display:flex;justify-content:center;margin-bottom:32px}
+.orb{width:88px;height:88px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;font-size:2.2rem}
+.orb::before,.orb::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid transparent}
+.orb-pending{background:rgba(99,102,241,.1)}
+.orb-pending::before{border-top-color:var(--indigo);animation:spin 1.1s linear infinite}
+.orb-pending::after{border-top-color:rgba(139,92,246,.35);animation:spin 2s linear infinite reverse;inset:-10px}
+.orb-ok{background:rgba(16,185,129,.1)}
+.orb-ok::before{border-top-color:var(--green);animation:spin 1.5s linear infinite}
+.orb-ok::after{border-top-color:rgba(16,185,129,.3);animation:spin 3s linear infinite reverse;inset:-10px}
+.orb-fail{background:rgba(239,68,68,.1)}
+.orb-fail::before{border-top-color:var(--red);animation:spin 3s linear infinite}
+
+.st-title{font-size:1.6rem;font-weight:800;letter-spacing:-.5px;margin-bottom:10px}
+.st-sub{font-size:.9rem;color:var(--dim);line-height:1.75;margin-bottom:28px}
+.pulse-lbl{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--indigo);animation:blink 1.5s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.order-tag{font-size:.78rem;color:var(--muted);margin-top:16px;font-family:'JetBrains Mono',monospace;word-break:break-all}
+
+/* Progress steps */
+.steps{display:flex;justify-content:center;align-items:center;margin-bottom:28px}
+.step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid var(--b1);color:var(--muted);transition:all .5s;position:relative;z-index:1;flex-shrink:0}
+.step-dot.done{background:var(--green);border-color:var(--green);color:#fff}
+.step-dot.active{background:rgba(99,102,241,.2);border-color:var(--indigo);color:var(--indigo);animation:step-pulse 1.5s ease infinite}
+@keyframes step-pulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
+.step-line{width:48px;height:2px;background:var(--b1);transition:background .5s}
+.step-line.done{background:var(--green)}
+
+/* Timer bar */
+.tbar-wrap{margin-bottom:14px}
+.tbar{height:4px;background:var(--b1);border-radius:2px;overflow:hidden}
+.tbar-fill{height:100%;background:var(--grad);border-radius:2px;transition:width .4s linear}
+
+/* Key display */
+.key-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:20px 22px;margin-bottom:22px;text-align:left}
+.key-lbl{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--green);letter-spacing:2.5px;margin-bottom:12px}
+.key-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;word-break:break-all;letter-spacing:.5px;margin-bottom:14px;user-select:all}
+.key-acts{display:flex;gap:10px;flex-wrap:wrap}
+.kbtn{flex:1;min-width:130px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);color:var(--indigo);border-radius:8px;padding:10px;font-size:.8rem;font-weight:600;transition:all .3s}
+.kbtn:hover{background:rgba(99,102,241,.2)}
+.save-warn{font-size:.76rem;color:var(--gold);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22);border-radius:10px;padding:10px 14px;margin-bottom:20px;line-height:1.6}
+
+/* Meta */
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.meta-box{background:rgba(255,255,255,.03);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;text-align:left}
+.meta-l{font-size:.68rem;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:1.5px;margin-bottom:6px}
+.meta-v{font-size:.9rem;font-weight:700;word-break:break-word}
+
+/* Buttons */
+.btn-p{width:100%;background:var(--grad);color:#fff;border:none;padding:14px;border-radius:11px;font-size:.95rem;font-weight:700;transition:all .3s;margin-bottom:10px}
+.btn-p:hover{transform:translateY(-2px);box-shadow:var(--glow-i)}
+.btn-o{width:100%;background:transparent;color:var(--dim);border:1px solid var(--b1);padding:12px;border-radius:11px;font-size:.875rem;transition:all .3s}
+.btn-o:hover{border-color:var(--b2);color:var(--txt)}
+
+/* Confetti */
+.confetti-piece{position:fixed;top:0;width:8px;height:10px;border-radius:2px;opacity:0;pointer-events:none;z-index:999;animation:confetti-fall 2s ease forwards}
+@keyframes confetti-fall{0%{opacity:1;transform:translateY(-30px) rotate(0)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+
+@media(max-width:480px){.card{padding:32px 22px}nav{padding:14px 20px}.meta-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><div class="ab ab1"></div><div class="ab ab2"></div></div>
+<nav>
+  <a href="index.html" class="logo" aria-label="NexAPI home">
+    <div class="logo-mark" aria-hidden="true">N</div>
+    <span class="logo-text">NexAPI</span>
+  </a>
+</nav>
+
+<main class="card">
+  <!-- PENDING -->
+  <div class="state active" id="st-pending" aria-live="polite">
+    <div class="orb-wrap"><div class="orb orb-pending" aria-hidden="true">⏳</div></div>
+    <div class="steps" aria-hidden="true">
+      <div class="step-dot done" id="s1">1</div>
+      <div class="step-line done" id="sl1"></div>
+      <div class="step-dot active" id="s2">2</div>
+      <div class="step-line" id="sl2"></div>
+      <div class="step-dot" id="s3">3</div>
+    </div>
+    <h1 class="st-title">Awaiting Payment</h1>
+    <p class="st-sub">Complete your payment on the Heleket page. This page checks automatically every few seconds — keep it open.</p>
+    <div class="tbar-wrap"><div class="tbar"><div class="tbar-fill" id="tbar" style="width:0%"></div></div></div>
+    <p class="pulse-lbl" id="chk-txt">Checking payment status…</p>
+    <div class="order-tag">Order: <span id="disp-order">—</span></div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="state" id="st-ok">
+    <div class="orb-wrap"><div class="orb orb-ok" aria-hidden="true">✓</div></div>
+    <h1 class="st-title" style="color:var(--green)">Payment Confirmed!</h1>
+    <p class="st-sub">Your API key is ready.</p>
+    <div class="key-box">
+      <div class="key-lbl">YOUR API KEY</div>
+      <div class="key-val" id="key-val">NK-XXXXXXXX-XXXXXXXX-XXXXXXXX</div>
+      <div class="key-acts">
+        <button class="kbtn" id="copy-key">📋 Copy Key</button>
+        <button class="kbtn" id="copy-url">🔗 Copy Call URL</button>
+      </div>
+    </div>
+    <div class="save-warn">💾 Save this key somewhere safe. You can always find it again from the dashboard using your email.</div>
+    <div class="meta-grid">
+      <div class="meta-box"><div class="meta-l">PLAN</div><div class="meta-v" id="k-plan">—</div></div>
+      <div class="meta-box"><div class="meta-l">EXPIRES</div><div class="meta-v" id="k-exp">—</div></div>
+      <div class="meta-box"><div class="meta-l">REQUESTS</div><div class="meta-v" id="k-reqs">—</div></div>
+      <div class="meta-box"><div class="meta-l">STATUS</div><div class="meta-v" style="color:var(--green)">● Active</div></div>
+    </div>
+    <button class="btn-p" id="go-dash">Go to My Dashboard →</button>
+    <button class="btn-o" onclick="location.href='docs.html'">Read the API Docs</button>
+  </div>
+
+  <!-- FAIL -->
+  <div class="state" id="st-fail">
+    <div class="orb-wrap"><div class="orb orb-fail" aria-hidden="true">✕</div></div>
+    <h1 class="st-title" style="color:var(--red)">Key Not Found Yet</h1>
+    <p class="st-sub" id="fail-msg">Could not confirm your payment. If you paid, please wait a moment and retry, or check your dashboard.</p>
+    <button class="btn-p" id="retry">Check Again</button>
+    <button class="btn-o" id="go-dash-2">Check Dashboard</button>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script>
+const { BACKEND, esc, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion } = window.NEXAPI;
+
+const P       = new URLSearchParams(location.search);
+const orderId = P.get('order_id');
+const email   = (P.get('email') || localStorage.getItem('nexapi_email') || '').toLowerCase();
+
+if (orderId) document.getElementById('disp-order').textContent = orderId;
+if (email)   localStorage.setItem('nexapi_email', email);
+
+const INTERVAL = 5000, MAX = 36;          // 36 × 5s = 3 minutes
+let attempts = 0, foundKey = null;
+
+const show = id => {
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+};
+
+const dashUrl = () => `dashboard.html${email ? `?email=${encodeURIComponent(email)}` : ''}`;
+document.getElementById('go-dash').addEventListener('click', () => location.href = dashUrl());
+document.getElementById('go-dash-2').addEventListener('click', () => location.href = dashUrl());
+document.getElementById('retry').addEventListener('click', () => { attempts = 0; show('st-pending'); check(); });
+
+function fail(msg) {
+  document.getElementById('fail-msg').textContent = msg;
+  show('st-fail');
+}
+
+async function check() {
+  if (!email) return fail('No email in the URL. Open your dashboard and look your key up by email instead.');
+
+  attempts++;
+  document.getElementById('chk-txt').textContent = `Checking… (${attempts}/${MAX})`;
+  // The bar tracks real progress toward the 3-minute cut-off, not a fake loop
+  document.getElementById('tbar').style.width = `${Math.min(100, (attempts / MAX) * 100)}%`;
+
+  try {
+    const d = await api(`/api/key/${encodeURIComponent(email)}`);
+    if (d.success && d.keys?.length) {
+      // Match this order when we can, so an existing older key isn't mistaken
+      // for the one that was just bought.
+      const key = orderId ? d.keys.find(k => k.payment_id === orderId) : d.keys[0];
+      if (key) return succeed(key);
+    }
+  } catch (e) {
+    console.warn('[pay] check failed:', e.message);
+  }
+
+  if (attempts >= MAX)
+    return fail(`Checked for 3 minutes and no key arrived for ${email}. Crypto confirmations can lag — try again in a few minutes, or open your dashboard.`);
+
+  setTimeout(check, INTERVAL);
+}
+
+function succeed(key) {
+  foundKey = key;
+  ['s2', 's3'].forEach(id => { const el = document.getElementById(id); el.classList.remove('active'); el.classList.add('done'); });
+  ['sl1', 'sl2'].forEach(id => document.getElementById(id).classList.add('done'));
+
+  document.getElementById('key-val').textContent = key.sub_key;
+  document.getElementById('k-plan').textContent  = key.plan_name || '—';
+  document.getElementById('k-reqs').textContent  = key.requests_limit != null ? fmtNum(key.requests_limit) : 'Unlimited';
+  document.getElementById('k-exp').textContent   = key.is_lifetime ? 'Never ♾️' : fmtDate(key.expires_at);
+
+  setTimeout(() => { show('st-ok'); confetti(); }, 400);
+}
+
+document.getElementById('copy-key').addEventListener('click', async e => {
+  if (!foundKey) return;
+  if (await copyBtn(foundKey.sub_key, e.currentTarget)) toast('Key copied', 'ok');
+});
+document.getElementById('copy-url').addEventListener('click', async e => {
+  if (!foundKey) return;
+  const url = `${BACKEND}/admin/paid/key?key=${foundKey.sub_key}&num=`;
+  if (await copyBtn(url, e.currentTarget)) toast('Call URL copied', 'ok');
+});
+
+function confetti() {
+  if (reducedMotion) return;
+  const colors = ['#6366F1', '#8B5CF6', '#22D3EE', '#10B981', '#F59E0B', '#EC4899'];
+  for (let i = 0; i < 60; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti-piece';
+    c.style.cssText = `left:${Math.random() * 100}vw;background:${colors[i % colors.length]};` +
+                      `animation-delay:${Math.random() * .8}s;animation-duration:${1.5 + Math.random() * 1.5}s`;
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 3500);
+  }
+}
+
+setTimeout(check, 2000);
+</script>
+</body>
+</html>

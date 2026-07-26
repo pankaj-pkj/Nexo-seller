@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NexAPI — Instant API Access, Paid in USDT</title>
+<meta name="description" content="Buy instant API access with USDT. Pick a plan, pay with zero commission, and get a sub-API key in seconds. Daily, Weekly, Monthly and Lifetime tiers.">
+<meta name="theme-color" content="#04060D">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NexAPI — Instant API Access">
+<meta property="og:description" content="Pay once with USDT. Get a sub-API key in seconds. Your real key stays hidden behind our gateway.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+canvas#particles{position:fixed;inset:0;z-index:1;pointer-events:none}
+.ab1{width:55vw;height:55vw;background:radial-gradient(circle,rgba(99,102,241,.14) 0%,transparent 70%);top:-15vw;left:-10vw;animation-duration:22s}
+.ab2{width:45vw;height:45vw;background:radial-gradient(circle,rgba(139,92,246,.12) 0%,transparent 70%);bottom:-10vw;right:-5vw;animation-duration:28s;animation-direction:alternate-reverse}
+.ab3{width:35vw;height:35vw;background:radial-gradient(circle,rgba(34,211,238,.08) 0%,transparent 70%);top:40%;left:55%;animation-duration:18s}
+
+/* ── Nav ───────────────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:16px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(4,6,13,.8);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--b1);transition:padding .3s,background .3s}
+nav.scrolled{padding:11px 48px;background:rgba(4,6,13,.94)}
+.nav-mid{display:flex;gap:28px;list-style:none}
+.nav-mid a{color:var(--dim);text-decoration:none;font-size:.875rem;transition:color .25s;font-weight:500}
+.nav-mid a:hover{color:var(--txt)}
+.nav-right{display:flex;gap:10px;align-items:center}
+.n-dash{color:var(--dim);font-size:.875rem;text-decoration:none;padding:8px 16px;border:1px solid var(--b1);border-radius:8px;transition:all .25s}
+.n-dash:hover{border-color:var(--b2);color:var(--txt)}
+.n-cta{background:var(--grad);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:.875rem;font-weight:600;transition:all .3s;position:relative;overflow:hidden}
+.n-cta::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:.3s}
+.n-cta:hover{transform:translateY(-1px);box-shadow:var(--glow-i)}
+.n-cta:hover::before{opacity:1}
+
+/* Mobile menu */
+.burger{display:none;background:none;border:1px solid var(--b1);border-radius:8px;padding:8px 10px;flex-direction:column;gap:4px;width:38px;align-items:center}
+.burger span{display:block;width:18px;height:2px;background:var(--txt);border-radius:2px;transition:transform .3s,opacity .3s}
+.burger[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+.burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.mobile-menu{position:fixed;top:0;right:0;bottom:0;width:min(78vw,300px);z-index:199;
+  background:rgba(6,9,20,.99);backdrop-filter:blur(24px);border-left:1px solid var(--b1);
+  padding:88px 28px 28px;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;gap:6px}
+.mobile-menu.open{transform:translateX(0)}
+.mobile-menu a{color:var(--dim);text-decoration:none;font-size:1rem;font-weight:500;padding:14px 4px;border-bottom:1px solid var(--b1)}
+.mobile-menu a:hover{color:var(--txt)}
+.mm-scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:198;opacity:0;pointer-events:none;transition:opacity .3s}
+.mm-scrim.open{opacity:1;pointer-events:all}
+
+/* ── Hero ──────────────────────────────────────────────────── */
+.hero{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);padding:7px 20px;border-radius:100px;font-size:.78rem;color:var(--cyan);margin-bottom:36px;animation:fadeDown .7s ease both}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:livepulse 2s infinite}
+@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.7)}50%{box-shadow:0 0 0 7px rgba(16,185,129,0)}}
+
+h1.headline{font-size:clamp(2.4rem,6vw,5.2rem);font-weight:800;line-height:1.06;letter-spacing:-2px;margin-bottom:24px;animation:fadeUp .8s ease .12s both}
+h1.headline .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+h1.headline .glow-word{position:relative}
+h1.headline .glow-word::after{content:attr(data-text);position:absolute;left:0;top:0;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:blur(18px);opacity:.6;z-index:-1}
+.hero-sub{font-size:1.08rem;color:var(--dim);max-width:560px;line-height:1.8;margin-bottom:44px;animation:fadeUp .8s ease .25s both}
+
+/* Typing terminal */
+.terminal{background:var(--card2);border:1px solid var(--b1);border-radius:16px;padding:20px 28px;margin-bottom:44px;text-align:left;max-width:520px;width:100%;animation:fadeUp .8s ease .35s both;position:relative;overflow:hidden}
+.terminal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--grad);opacity:.6}
+.term-bar{display:flex;gap:7px;margin-bottom:14px;align-items:center}
+.term-dot{width:11px;height:11px;border-radius:50%}
+.td-r{background:#EF4444}.td-y{background:#F59E0B}.td-g{background:#10B981}
+.term-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);margin-left:8px;letter-spacing:1px}
+/* min-height reserves the full 9 lines so the card never jumps while typing */
+.term-line{font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.9;white-space:pre-wrap;word-break:break-all;min-height:9.5em}
+
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s ease .5s both}
+.btn-grd{background:var(--grad);color:#fff;border:none;padding:15px 38px;border-radius:11px;font-size:1rem;font-weight:700;transition:all .3s;position:relative;overflow:hidden;letter-spacing:-.2px}
+.btn-grd::after{content:'';position:absolute;inset:-50%;background:conic-gradient(transparent 0deg,rgba(255,255,255,.15) 90deg,transparent 180deg);animation:spin 3s linear infinite;opacity:0;transition:.3s}
+.btn-grd:hover{transform:translateY(-2px);box-shadow:var(--glow-i)}
+.btn-grd:hover::after{opacity:1}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--b2);padding:15px 38px;border-radius:11px;font-size:1rem;font-weight:600;transition:all .3s}
+.btn-ghost:hover{border-color:var(--indigo);color:var(--indigo);transform:translateY(-2px)}
+
+/* ── Stats ─────────────────────────────────────────────────── */
+.stats-strip{position:relative;z-index:2;display:flex;border-top:1px solid var(--b1);border-bottom:1px solid var(--b1);background:rgba(8,12,26,.7);backdrop-filter:blur(12px)}
+.ss-item{flex:1;text-align:center;padding:28px 12px;border-right:1px solid var(--b1)}
+.ss-item:last-child{border-right:none}
+.ss-val{font-size:1.75rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.ss-lbl{font-size:.72rem;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:2px}
+
+/* ── Sections ──────────────────────────────────────────────── */
+.section{position:relative;z-index:2;padding:110px 24px}
+.sec-head{text-align:center;margin-bottom:72px}
+.sec-eye{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cyan);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
+.sec-title{font-size:clamp(1.9rem,4vw,3rem);font-weight:800;letter-spacing:-1px;margin-bottom:16px}
+.sec-sub{color:var(--dim);max-width:500px;margin:0 auto;line-height:1.8;font-size:.95rem}
+
+/* Plan grid */
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:1160px;margin:0 auto}
+.plan-card{position:relative;border-radius:22px;padding:2px;cursor:pointer;text-align:left;width:100%;
+  background:none;border:none;font-family:inherit;color:inherit;display:block;
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1);animation:fadeUp .7s ease both}
+.plan-card:nth-child(1){animation-delay:.05s}
+.plan-card:nth-child(2){animation-delay:.12s}
+.plan-card:nth-child(3){animation-delay:.19s}
+.plan-card:nth-child(4){animation-delay:.26s}
+.plan-card::before{content:'';position:absolute;inset:0;border-radius:22px;background:var(--b1);transition:background .4s}
+.plan-card:hover,.plan-card:focus-visible{transform:translateY(-12px)}
+.plan-card:hover::before,.plan-card:focus-visible::before{background:var(--plan-color,var(--grad))}
+/* Column layout + margin-top:auto on the button keeps every CTA on the same
+   line even though the plans have different numbers of features. */
+.plan-inner{background:var(--card);border-radius:20px;padding:30px;height:100%;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.plan-inner::before{content:'';position:absolute;top:-60px;right:-60px;width:140px;height:140px;border-radius:50%;
+  background:var(--plan-flat,var(--indigo));opacity:.07;transition:opacity .4s,transform .4s}
+.plan-card:hover .plan-inner::before{opacity:.14;transform:scale(1.3)}
+.plan-inner::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%);
+  transform:translateX(-100%)}
+.plan-card:hover .plan-inner::after{transform:translateX(200%);transition:transform .6s ease}
+/* The badge slot is always present (empty on non-popular plans) so all four
+   cards keep their prices and buttons on the same baseline. */
+.plan-badge-slot{min-height:26px;margin-bottom:18px}
+.plan-badge{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;font-weight:700;padding:5px 14px;border-radius:100px;letter-spacing:.5px;color:#fff}
+.plan-name{font-size:1.2rem;font-weight:700;margin-bottom:4px}
+.plan-icon{font-size:1.5rem;margin-bottom:14px}
+.plan-price-row{display:flex;align-items:baseline;gap:3px;margin-bottom:6px;flex-wrap:wrap}
+.p-dollar{font-size:1.1rem;color:var(--dim);font-weight:600}
+.p-amount{font-size:3.2rem;font-weight:800;letter-spacing:-2px;line-height:1}
+.p-period{font-size:.82rem;color:var(--muted);margin-left:4px;align-self:flex-end;padding-bottom:5px}
+.plan-desc{font-size:.84rem;color:var(--muted);margin-bottom:22px}
+.plan-divider{height:1px;background:var(--b1);margin-bottom:20px}
+.plan-feats{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:26px;flex:1}
+.plan-feats li{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--dim)}
+.feat-ico{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.65rem;font-weight:700}
+.plan-btn{display:block;text-align:center;width:100%;padding:13px;border-radius:10px;border:none;font-size:.9rem;font-weight:700;transition:transform .3s;letter-spacing:.2px;color:#fff;margin-top:auto}
+.plan-card:hover .plan-btn{transform:translateY(-2px)}
+.plan-skeleton{background:var(--card);border:1px solid var(--b1);border-radius:22px;height:430px;
+  background-image:linear-gradient(100deg,transparent 30%,rgba(99,102,241,.07) 50%,transparent 70%);
+  background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.plan-error{grid-column:1/-1;text-align:center;color:var(--muted);padding:48px;border:1px dashed var(--b1);border-radius:20px;line-height:1.8}
+.plan-error code{color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:.8rem}
+.retry-btn{margin-top:16px;background:rgba(99,102,241,.12);border:1px solid var(--b2);color:var(--indigo);padding:9px 20px;border-radius:8px;font-size:.85rem;font-weight:600}
+
+/* How it works */
+.how-bg{background:rgba(8,12,26,.4);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:1000px;margin:0 auto}
+.how-card{background:var(--card);border:1px solid var(--b1);border-radius:20px;padding:30px 24px;text-align:center;transition:all .4s;position:relative;overflow:hidden}
+.how-card:hover{border-color:var(--b2);transform:translateY(-5px)}
+.how-card::before{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--grad);transform:scaleX(0);transition:transform .4s;transform-origin:left}
+.how-card:hover::before{transform:scaleX(1)}
+.how-num{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--indigo);letter-spacing:3px;margin-bottom:16px}
+.how-icon{font-size:2.2rem;margin-bottom:14px}
+.how-title{font-size:1rem;font-weight:700;margin-bottom:10px}
+.how-desc{font-size:.84rem;color:var(--muted);line-height:1.7}
+.how-desc code{color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.78rem}
+
+/* ── Footer ────────────────────────────────────────────────── */
+footer{position:relative;z-index:2;padding:40px 24px;text-align:center;border-top:1px solid var(--b1);color:var(--muted);font-size:.82rem;background:rgba(4,6,13,.9)}
+footer a{color:var(--indigo);text-decoration:none}
+footer a:hover{text-decoration:underline}
+.footer-links{display:flex;gap:24px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+
+/* ── Modal ─────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:rgba(10,14,30,.98);border:1px solid var(--b2);border-radius:26px;padding:44px 40px;
+  width:100%;max-width:430px;position:relative;max-height:90vh;overflow-y:auto;
+  transform:scale(.9) translateY(24px);transition:transform .35s cubic-bezier(.34,1.2,.64,1)}
+.overlay.open .modal{transform:scale(1) translateY(0)}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--plan-gradient,var(--grad));border-radius:26px 26px 0 0}
+.m-x{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:1.1rem;padding:6px 9px;border-radius:6px;transition:color .2s;line-height:1}
+.m-x:hover{color:var(--txt)}
+.m-h{font-size:1.45rem;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.m-s{font-size:.875rem;color:var(--dim);margin-bottom:28px}
+.m-plan-box{border-radius:14px;padding:14px 18px;margin-bottom:26px;display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid rgba(99,102,241,.25);background:rgba(99,102,241,.07)}
+.m-pname{font-weight:700;font-size:.95rem}
+.m-pprice{font-weight:800;font-size:1.1rem;white-space:nowrap}
+.m-lbl{display:block;font-size:.78rem;color:var(--dim);margin-bottom:8px;font-weight:500}
+.m-inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--b1);border-radius:10px;padding:13px 16px;color:var(--txt);font-size:.92rem;outline:none;transition:border-color .25s;margin-bottom:8px}
+.m-inp:focus{border-color:var(--indigo)}
+.m-inp.invalid{border-color:var(--red)}
+.m-err{font-size:.78rem;color:var(--red);min-height:1.2em;margin-bottom:12px}
+.m-btn{width:100%;padding:15px;background:var(--plan-gradient,var(--grad));color:#fff;border:none;border-radius:11px;font-size:.95rem;font-weight:700;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.2px}
+.m-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:var(--glow-i)}
+.m-btn:disabled{opacity:.55;transform:none}
+.m-note{text-align:center;font-size:.74rem;color:var(--muted);margin-top:14px;line-height:1.6}
+
+@media(max-width:900px){
+  nav,nav.scrolled{padding:14px 20px}
+  .nav-mid,.n-dash{display:none}
+  .burger{display:flex}
+  h1.headline{letter-spacing:-1px}
+  .hero{padding:100px 20px 60px}
+  .section{padding:70px 16px}
+  .stats-strip{flex-wrap:wrap}
+  .ss-item{min-width:50%}
+  .ss-item:nth-child(2){border-right:none}
+  .ss-item:nth-child(1),.ss-item:nth-child(2){border-bottom:1px solid var(--b1)}
+}
+@media(max-width:560px){
+  .terminal{padding:16px 18px}
+  .term-line{font-size:.72rem}
+  .modal{padding:34px 24px}
+  .p-amount{font-size:2.6rem}
+}
+</style>
+</head>
+<body>
+
+<a href="#plans" class="skip-link">Skip to plans</a>
+
+<div class="aurora" aria-hidden="true">
+  <div class="ab ab1"></div>
+  <div class="ab ab2"></div>
+  <div class="ab ab3"></div>
+</div>
+<div class="grid-overlay" aria-hidden="true"></div>
+<canvas id="particles" aria-hidden="true"></canvas>
+
+<nav id="nav">
+  <a href="#" class="logo" aria-label="NexAPI home">
+    <div class="logo-mark" aria-hidden="true">N</div>
+    <span class="logo-text">NexAPI</span>
+  </a>
+  <ul class="nav-mid">
+    <li><a href="#plans">Plans</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="dashboard.html" class="n-dash">My Keys</a>
+    <button class="n-cta" id="cta-top">Get Access</button>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mm-scrim" id="mm-scrim" hidden></div>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#plans">Plans</a>
+  <a href="#how">How It Works</a>
+  <a href="docs.html">API Docs</a>
+  <a href="dashboard.html">My Keys</a>
+  <a href="admin.html">Admin</a>
+</div>
+
+<main id="main">
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="live-dot" aria-hidden="true"></span>
+    Zero Commission · Crypto · Lifetime Plans Available
+  </div>
+
+  <h1 class="headline">
+    API Access,<br>
+    <span class="grad glow-word" data-text="Instantly Unlocked">Instantly Unlocked</span>
+  </h1>
+  <p class="hero-sub">Pay once with USDT. Get a sub-API key in seconds. Our gateway validates and proxies your requests — your real key stays hidden forever.</p>
+
+  <div class="terminal" aria-hidden="true">
+    <div class="term-bar">
+      <div class="term-dot td-r"></div>
+      <div class="term-dot td-y"></div>
+      <div class="term-dot td-g"></div>
+      <span class="term-label">NEXAPI GATEWAY</span>
+    </div>
+    <div class="term-line" id="term-out"></div>
+  </div>
+
+  <div class="hero-btns">
+    <button class="btn-grd" id="cta-hero">View Plans →</button>
+    <button class="btn-ghost" onclick="location.href='docs.html'">API Docs</button>
+  </div>
+</section>
+
+<!-- ── Stats ─────────────────────────────────────────────────── -->
+<div class="stats-strip">
+  <div class="ss-item"><div class="ss-val">99.9%</div><div class="ss-lbl">UPTIME</div></div>
+  <div class="ss-item"><div class="ss-val">&lt;50ms</div><div class="ss-lbl">LATENCY</div></div>
+  <div class="ss-item"><div class="ss-val">0% FEE</div><div class="ss-lbl">COMMISSION</div></div>
+  <div class="ss-item"><div class="ss-val">4</div><div class="ss-lbl">PLAN TIERS</div></div>
+</div>
+
+<!-- ── Plans ─────────────────────────────────────────────────── -->
+<section class="section" id="plans">
+  <div class="sec-head rv">
+    <div class="sec-eye">// Pricing Plans</div>
+    <h2 class="sec-title">Choose Your Plan</h2>
+    <p class="sec-sub">One-time USDT payment. No subscription traps. Lifetime plan never expires.</p>
+  </div>
+  <div class="plan-grid" id="plan-grid" aria-busy="true">
+    <div class="plan-skeleton"></div><div class="plan-skeleton"></div>
+    <div class="plan-skeleton"></div><div class="plan-skeleton"></div>
+  </div>
+</section>
+
+<!-- ── How ───────────────────────────────────────────────────── -->
+<section class="section how-bg" id="how">
+  <div class="sec-head rv">
+    <div class="sec-eye">// Process</div>
+    <h2 class="sec-title">Up in 4 Steps</h2>
+  </div>
+  <div class="how-grid">
+    <div class="how-card rv"><div class="how-num">STEP 01</div><div class="how-icon" aria-hidden="true">🎯</div><h3 class="how-title">Pick a Plan</h3><p class="how-desc">Daily, Weekly, Monthly, or Lifetime. Choose what fits your project scale.</p></div>
+    <div class="how-card rv"><div class="how-num">STEP 02</div><div class="how-icon" aria-hidden="true">💎</div><h3 class="how-title">Pay with USDT</h3><p class="how-desc">Zero-commission crypto payment via Heleket. No credit card needed.</p></div>
+    <div class="how-card rv"><div class="how-num">STEP 03</div><div class="how-icon" aria-hidden="true">🔑</div><h3 class="how-title">Get Your Key</h3><p class="how-desc">A unique NK-XXXX key is auto-generated and linked to your email instantly.</p></div>
+    <div class="how-card rv"><div class="how-num">STEP 04</div><div class="how-icon" aria-hidden="true">⚡</div><h3 class="how-title">Call the API</h3><p class="how-desc">Use <code>?key=YOUR_KEY&amp;num=…</code> on any request. We handle the rest.</p></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="footer-links">
+    <a href="docs.html">API Docs</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="admin.html">Admin</a>
+  </div>
+  © <span id="year">2025</span> NexAPI · Powered by Heleket · All payments in USDT
+</footer>
+
+<!-- Payment Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <button class="m-x" id="m-close" aria-label="Close">✕</button>
+    <div class="m-h" id="m-title">Complete Purchase</div>
+    <div class="m-s">Enter your email to link your API key after payment.</div>
+    <div class="m-plan-box">
+      <span class="m-pname" id="m-pname">Plan</span>
+      <span class="m-pprice" id="m-pprice">$0 USDT</span>
+    </div>
+    <label class="m-lbl" for="m-email">Email Address</label>
+    <input type="email" id="m-email" class="m-inp" placeholder="you@example.com" autocomplete="email" inputmode="email">
+    <div class="m-err" id="m-err" role="alert"></div>
+    <button class="m-btn" id="pay-btn">
+      <span id="pay-txt">Pay with USDT →</span>
+    </button>
+    <div class="m-note">🔒 Secured by Heleket · Key auto-delivered on confirmation</div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const { BACKEND, esc, toast, api, reducedMotion } = window.NEXAPI;
+document.getElementById('year').textContent = new Date().getFullYear();
+
+// ── Particles ─────────────────────────────────────────────────
+// Skipped for reduced-motion users, thinned out on small screens, and paused
+// while the tab is hidden so it never burns a phone battery in the background.
+(function particles() {
+  if (reducedMotion) return;
+  const cv = document.getElementById('particles'), cx = cv.getContext('2d');
+  let W, H, pts, raf = null;
+
+  const count = () => innerWidth < 700 ? 28 : innerWidth < 1200 ? 48 : 70;
+  const resize = () => {
+    W = cv.width = innerWidth; H = cv.height = innerHeight;
+    pts = Array.from({ length: count() }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4,
+      r: Math.random() * 1.5 + .4, a: Math.random() * .35 + .08
+    }));
+  };
+  resize();
+
+  let resizeTimer;
+  addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 150); });
+
+  const frame = () => {
+    cx.clearRect(0, 0, W, H);
+    for (const p of pts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      cx.fillStyle = `rgba(99,102,241,${p.a})`; cx.fill();
+    }
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+        if (d < 110) {
+          cx.beginPath(); cx.moveTo(pts[i].x, pts[i].y); cx.lineTo(pts[j].x, pts[j].y);
+          cx.strokeStyle = `rgba(99,102,241,${.12 * (1 - d / 110)})`;
+          cx.lineWidth = .5; cx.stroke();
+        }
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  };
+
+  const start = () => { if (!raf) raf = requestAnimationFrame(frame); };
+  const stop  = () => { if (raf) { cancelAnimationFrame(raf); raf = null; } };
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+  start();
+})();
+
+// ── Terminal typing animation ─────────────────────────────────
+(function terminal() {
+  const el = document.getElementById('term-out');
+  if (!el) return;
+
+  const host  = BACKEND.replace(/^https?:\/\//, '');
+  const lines = [
+    { t: 'prompt',  v: '$ ' },
+    { t: 'url',     v: `GET ${host}/admin/paid/key` },
+    { t: 'normal',  v: '\n  ' },
+    { t: 'key',     v: '?key=NK-4F2A8C1D-9E7B3A2F-D6' },
+    { t: 'normal',  v: '\n  ' },
+    { t: 'num',     v: '&num=919876543210' },
+    { t: 'normal',  v: '\n\n' },
+    { t: 'out',     v: 'HTTP/1.1 200 OK\n' },
+    { t: 'success', v: '{"success":true,"data":"..."}' }
+  ];
+  const colors = { prompt:'#6366F1', url:'#22D3EE', key:'#10B981', num:'#F59E0B', out:'#94A3B8', success:'#10B981', normal:'#F8FAFC' };
+
+  const paint = () => {
+    el.textContent = '';
+    for (const l of lines) {
+      const s = document.createElement('span');
+      s.style.color = colors[l.t]; s.textContent = l.v;
+      el.appendChild(s);
+    }
+  };
+  if (reducedMotion) return paint();   // no typing loop — just show the finished call
+
+  let li = 0, ci = 0;
+  (function type() {
+    if (li >= lines.length) { setTimeout(() => { el.textContent = ''; li = 0; ci = 0; type(); }, 2500); return; }
+    const line = lines[li];
+    if (ci < line.v.length) {
+      const span = document.createElement('span');
+      span.style.color = colors[line.t] || '#F8FAFC';
+      span.textContent = line.v[ci];
+      el.appendChild(span);
+      ci++; setTimeout(type, 28);
+    } else { li++; ci = 0; setTimeout(type, 30); }
+  })();
+})();
+
+// ── Scroll reveal + sticky nav ────────────────────────────────
+const obs = new IntersectionObserver(es => es.forEach((e, i) => {
+  if (e.isIntersecting) { setTimeout(() => e.target.classList.add('in'), i * 90); obs.unobserve(e.target); }
+}), { threshold: .1 });
+document.querySelectorAll('.rv').forEach(el => obs.observe(el));
+
+addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', scrollY > 20);
+}, { passive: true });
+
+// ── Mobile menu ───────────────────────────────────────────────
+const burger = document.getElementById('burger');
+const menu   = document.getElementById('mobile-menu');
+const scrim  = document.getElementById('mm-scrim');
+function setMenu(open) {
+  menu.classList.toggle('open', open);
+  scrim.classList.toggle('open', open);
+  scrim.hidden = !open;
+  burger.setAttribute('aria-expanded', String(open));
+  burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+}
+burger.addEventListener('click', () => setMenu(!menu.classList.contains('open')));
+scrim.addEventListener('click', () => setMenu(false));
+menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setMenu(false)));
+
+// ── Load plans ─────────────────────────────────────────────────
+const planMeta = {
+  daily:    { icon:'⚡',  color:'#3B82F6', grad:'linear-gradient(135deg,#3B82F6,#2563EB)', popular:false },
+  weekly:   { icon:'🌙',  color:'#8B5CF6', grad:'linear-gradient(135deg,#8B5CF6,#7C3AED)', popular:false },
+  monthly:  { icon:'🚀',  color:'#6366F1', grad:'linear-gradient(135deg,#6366F1,#4F46E5)', popular:true  },
+  lifetime: { icon:'♾️', color:'#F59E0B', grad:'linear-gradient(135deg,#F59E0B,#D97706)', popular:false }
+};
+const fallbackMeta = { icon:'🔑', color:'#6366F1', grad:'linear-gradient(135deg,#6366F1,#8B5CF6)', popular:false };
+
+const periodLabel = days =>
+  !days ? ' · One-time' : days === 1 ? ' / day' : days === 7 ? ' / week' : days === 30 ? ' / month' : ` / ${days} days`;
+
+async function loadPlans() {
+  const grid = document.getElementById('plan-grid');
+  try {
+    const d = await api('/api/plans');
+    if (!d.success || !d.plans?.length) throw new Error('No active plans returned');
+
+    // Everything from Firestore is escaped — a plan name is admin-controlled,
+    // but it still has no business being parsed as markup.
+    grid.innerHTML = d.plans.map(p => {
+      const m      = planMeta[p.id] || fallbackMeta;
+      const feats  = Array.isArray(p.features) ? p.features : [];
+      const isLife = !p.duration_days;
+      return `
+        <button class="plan-card rv" type="button"
+                style="--plan-color:${m.grad};--plan-flat:${m.color}"
+                data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-price="${esc(p.price_usd)}"
+                data-grad="${m.grad}" data-color="${m.color}"
+                aria-label="Buy the ${esc(p.name)} plan for ${esc(p.price_usd)} USDT">
+          <div class="plan-inner">
+            <div class="plan-badge-slot">${m.popular ? `<span class="plan-badge" style="background:${m.grad}">⭐ MOST POPULAR</span>` : ''}</div>
+            <div class="plan-icon" aria-hidden="true">${m.icon}</div>
+            <div class="plan-name">${esc(p.name)}</div>
+            <div class="plan-price-row">
+              <span class="p-dollar">$</span>
+              <span class="p-amount" style="color:${m.color}">${esc(p.price_usd)}</span>
+              <span class="p-period">USDT${periodLabel(p.duration_days)}</span>
+            </div>
+            <div class="plan-desc">${esc(p.description || '')}</div>
+            <div class="plan-divider"></div>
+            <ul class="plan-feats">
+              ${feats.map(f => `<li><span class="feat-ico" style="background:${m.color}22;color:${m.color}">✓</span>${esc(f)}</li>`).join('')}
+            </ul>
+            <span class="plan-btn" style="background:${m.grad};box-shadow:0 4px 20px ${m.color}33">
+              ${isLife ? 'Get Lifetime Access →' : 'Get Access →'}
+            </span>
+          </div>
+        </button>`;
+    }).join('');
+
+    grid.setAttribute('aria-busy', 'false');
+    grid.querySelectorAll('.rv').forEach(el => obs.observe(el));
+    grid.querySelectorAll('.plan-card').forEach(card => {
+      card.addEventListener('click', () => openModal(card.dataset));
+    });
+  } catch (err) {
+    grid.setAttribute('aria-busy', 'false');
+    grid.innerHTML = `
+      <div class="plan-error">
+        ⚠ Could not load plans — ${esc(err.message)}<br><br>
+        <code>${esc(BACKEND)}/api/plans</code><br>
+        <button class="retry-btn" id="retry-plans">Retry</button>
+      </div>`;
+    document.getElementById('retry-plans').addEventListener('click', () => {
+      grid.innerHTML = '<div class="plan-skeleton"></div>'.repeat(4);
+      grid.setAttribute('aria-busy', 'true');
+      loadPlans();
+    });
+  }
+}
+loadPlans();
+
+// ── Modal ─────────────────────────────────────────────────────
+const overlay = document.getElementById('overlay');
+const modal   = document.getElementById('modal');
+const emailIn = document.getElementById('m-email');
+const errBox  = document.getElementById('m-err');
+let selPlan = null, lastFocus = null;
+
+function openModal(data) {
+  selPlan   = { id: data.id, name: data.name, price: data.price };
+  lastFocus = document.activeElement;
+
+  document.getElementById('m-pname').textContent = `${data.name} Plan`;
+  const priceEl = document.getElementById('m-pprice');
+  priceEl.textContent = `$${data.price} USDT`;
+  priceEl.style.color = data.color;
+  modal.style.setProperty('--plan-gradient', data.grad);
+
+  errBox.textContent = '';
+  emailIn.classList.remove('invalid');
+  emailIn.value = localStorage.getItem('nexapi_email') || '';
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => emailIn.focus(), 300);
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  lastFocus?.focus();
+}
+
+document.getElementById('m-close').addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+emailIn.addEventListener('keydown', e => { if (e.key === 'Enter') pay(); });
+
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (overlay.classList.contains('open')) closeModal();
+    else if (menu.classList.contains('open')) setMenu(false);
+  }
+  // Keep tab focus inside the dialog while it is open
+  if (e.key === 'Tab' && overlay.classList.contains('open')) {
+    const items = modal.querySelectorAll('button, input, [href]');
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+
+async function pay() {
+  const email = emailIn.value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errBox.textContent = 'Enter a valid email address.';
+    emailIn.classList.add('invalid');
+    emailIn.focus();
+    return;
+  }
+  if (!selPlan) return;
+
+  errBox.textContent = '';
+  emailIn.classList.remove('invalid');
+  localStorage.setItem('nexapi_email', email);   // pre-fills the dashboard later
+
+  const btn = document.getElementById('pay-btn'), txt = document.getElementById('pay-txt');
+  btn.disabled = true;
+  txt.innerHTML = '<span class="spin"></span> Creating invoice…';
+  try {
+    const d = await api('/api/payment/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: selPlan.id, email })
+    });
+    if (!d.success) throw new Error(d.error || 'Could not create the invoice');
+    toast('Redirecting to payment…', 'ok');
+    setTimeout(() => location.href = d.payment_url, 900);
+  } catch (err) {
+    errBox.textContent = err.message;
+    toast(err.message, 'err');
+    btn.disabled = false;
+    txt.textContent = 'Pay with USDT →';
+  }
+}
+document.getElementById('pay-btn').addEventListener('click', pay);
+
+// ── Nav CTAs ──────────────────────────────────────────────────
+const goPlans = () => document.getElementById('plans').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+document.getElementById('cta-top').addEventListener('click', goPlans);
+document.getElementById('cta-hero').addEventListener('click', goPlans);
+</script>
+</body>
+</html>
