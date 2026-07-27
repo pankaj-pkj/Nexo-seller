@@ -42,9 +42,11 @@ router.get('/:email', publicLimit, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid email' });
 
   try {
+    // Equality filter only, then sort in JS. Adding .orderBy('created_at') here
+    // would require a hand-built composite index; one customer has a handful of
+    // keys, so sorting them in memory costs nothing and keeps setup index-free.
     const snap = await db.collection('api_keys')
       .where('user_email', '==', email)
-      .orderBy('created_at', 'desc')
       .get();
 
     const now  = new Date();
@@ -73,6 +75,8 @@ router.get('/:email', publicLimit, async (req, res) => {
         is_lifetime:    !exp
       };
     });
+
+    keys.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     res.json({ success: true, count: keys.length, keys });
   } catch (err) {

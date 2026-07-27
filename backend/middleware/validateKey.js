@@ -31,9 +31,11 @@ async function validateKey(req, res, next) {
   }
 
   try {
+    // Single equality filter — served by Firestore's automatic single-field
+    // index, so no composite index has to be created before the gateway works.
+    // is_active is checked below instead of in the query.
     const snap = await db.collection('api_keys')
       .where('sub_key', '==', key.toUpperCase())
-      .where('is_active', '==', true)
       .limit(1)
       .get();
 
@@ -43,6 +45,10 @@ async function validateKey(req, res, next) {
 
     const keyDoc  = snap.docs[0];
     const keyData = keyDoc.data();
+
+    if (!keyData.is_active) {
+      return res.status(401).json({ success: false, error: 'API key is inactive' });
+    }
 
     // Expiry check (null expires_at = Lifetime plan)
     if (keyData.expires_at) {

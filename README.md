@@ -95,20 +95,16 @@ exactly what `npm run seed` does.
 Existing plans are never overwritten. To reset prices back to the defaults, use
 `npm run seed -- --force` or `POST /api/admin/seed?force=1`.
 
-### Firestore indexes
+### Firestore indexes — none needed
 
-Two queries pair an equality filter with an `orderBy`, so Firestore needs composite
-indexes for them:
+There is nothing to create. Every query here uses either a single equality filter or
+a single-field `orderBy`, both of which Firestore indexes automatically.
 
-| Collection | Fields |
-|---|---|
-| `plans` | `is_active` (Asc) + `order` (Asc) |
-| `api_keys` | `user_email` (Asc) + `created_at` (Desc) |
-
-You don't have to build these by hand. The first time each query runs, Firestore
-returns an error containing a create-this-index link — the landing page renders it as
-a **Create the Firestore index →** button, and it's also in the Render logs. Tap it,
-confirm, wait a minute.
+That is a deliberate constraint, not a coincidence. Pairing `.where()` with an
+`.orderBy()` on a different field would demand a hand-built composite index before
+the query runs at all — an extra manual step on every fresh deployment. So `plans`
+(4 documents) and a customer's key list are filtered and sorted in JS instead. Keep
+it that way when adding queries.
 
 ---
 
