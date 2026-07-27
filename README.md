@@ -84,6 +84,32 @@ python3 -m http.server 8080   # http://localhost:8080
 `frontend/config.js` auto-detects localhost and talks to `http://localhost:3000`,
 so there is nothing to edit while developing.
 
+### No terminal? (setting up from a phone)
+
+The whole local step is optional — it only exists to test before deploying. The one
+thing you can't skip is seeding the plans, so there is a no-terminal path for it:
+deploy first, open `admin.html`, log in, and a **Seed default plans** button appears
+whenever the `plans` collection is empty. It calls `POST /api/admin/seed`, which does
+exactly what `npm run seed` does.
+
+Existing plans are never overwritten. To reset prices back to the defaults, use
+`npm run seed -- --force` or `POST /api/admin/seed?force=1`.
+
+### Firestore indexes
+
+Two queries pair an equality filter with an `orderBy`, so Firestore needs composite
+indexes for them:
+
+| Collection | Fields |
+|---|---|
+| `plans` | `is_active` (Asc) + `order` (Asc) |
+| `api_keys` | `user_email` (Asc) + `created_at` (Desc) |
+
+You don't have to build these by hand. The first time each query runs, Firestore
+returns an error containing a create-this-index link — the landing page renders it as
+a **Create the Firestore index →** button, and it's also in the Render logs. Tap it,
+confirm, wait a minute.
+
 ---
 
 ## Deploying
@@ -159,6 +185,7 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 | GET | `/api/admin/keys?limit=50` | Keys with status |
 | GET | `/api/admin/payments?limit=50` | Payment records |
 | GET | `/api/admin/logs?limit=50` | Recent gateway calls |
+| POST | `/api/admin/seed` | Write the 4 default plans (`?force=1` to overwrite) |
 | POST | `/api/admin/keys/:id/deactivate` | Kill a key |
 | POST | `/api/admin/keys/:id/activate` | Restore a key |
 

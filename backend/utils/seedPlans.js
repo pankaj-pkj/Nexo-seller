@@ -1,6 +1,10 @@
 /**
- * Run once: node utils/seedPlans.js
- * Seeds 4 subscription plans into Firebase Firestore.
+ * The 4 subscription plans, and the seeding logic that writes them.
+ *
+ * Two ways to run it:
+ *   • CLI     — `npm run seed` (needs a terminal)
+ *   • Admin   — POST /api/admin/seed, or the "Seed plans" button in admin.html,
+ *               for anyone setting the project up without a laptop.
  */
 require('dotenv').config();
 const { db } = require('../db/firebase');
@@ -60,18 +64,43 @@ const plans = [
   }
 ];
 
-async function seed() {
-  console.log('Seeding plans...');
+/**
+ * Writes the plans to Firestore.
+ * Existing plans are left alone unless `force` is set — so hitting the admin
+ * button twice can never wipe prices you edited by hand in the console.
+ */
+async function seedPlans({ force = false } = {}) {
+  const created = [], skipped = [];
+
   for (const plan of plans) {
     const { id, ...data } = plan;
-    await db.collection('plans').doc(id).set({ ...data, created_at: new Date() });
-    console.log(`  ✓ ${plan.name} — $${plan.price_usd} USDT`);
+    const ref = db.collection('plans').doc(id);
+
+    if (!force && (await ref.get()).exists) { skipped.push(id); continue; }
+
+    await ref.set({ ...data, created_at: new Date() });
+    created.push(id);
   }
-  console.log('\nDone! All plans seeded.\n');
-  process.exit(0);
+
+  return { created, skipped };
 }
 
-seed().catch(err => {
-  console.error('Seed failed:', err.message);
-  process.exit(1);
-});
+module.exports = { plans, seedPlans };
+
+// CLI mode — only when run directly, not when required by the server
+if (require.main === module) {
+  const force = process.argv.includes('--force');
+  console.log(`Seeding plans${force ? ' (force: overwriting existing)' : ''}...`);
+
+  seedPlans({ force })
+    .then(({ created, skipped }) => {
+      created.forEach(id => console.log(`  ✓ wrote    ${id}`));
+      skipped.forEach(id => console.log(`  – skipped  ${id} (already exists, use --force to overwrite)`));
+      console.log('\nDone.\n');
+      process.exit(0);
+    })
+    .catch(err => {
+      console.error('Seed failed:', err.message);
+      process.exit(1);
+    });
+}

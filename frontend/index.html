@@ -142,7 +142,8 @@ h1.headline .glow-word::after{content:attr(data-text);position:absolute;left:0;t
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
 .plan-error{grid-column:1/-1;text-align:center;color:var(--muted);padding:48px;border:1px dashed var(--b1);border-radius:20px;line-height:1.8}
 .plan-error code{color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:.8rem}
-.retry-btn{margin-top:16px;background:rgba(99,102,241,.12);border:1px solid var(--b2);color:var(--indigo);padding:9px 20px;border-radius:8px;font-size:.85rem;font-weight:600}
+.retry-btn{display:inline-block;margin-top:16px;background:rgba(99,102,241,.12);border:1px solid var(--b2);color:var(--indigo);padding:9px 20px;border-radius:8px;font-size:.85rem;font-weight:600;text-decoration:none}
+.retry-btn:hover{background:rgba(99,102,241,.2)}
 
 /* How it works */
 .how-bg{background:rgba(8,12,26,.4);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)}
@@ -527,9 +528,18 @@ async function loadPlans() {
     });
   } catch (err) {
     grid.setAttribute('aria-busy', 'false');
+
+    // Firestore answers a missing composite index with a create-it URL inside
+    // the error text. Link it so it's one tap away instead of a wall of text.
+    const link = (err.message.match(/https?:\/\/\S+/) || [])[0];
+    const body = link
+      ? esc(err.message.replace(link, '')) +
+        `<br><br><a class="retry-btn" href="${esc(link)}" target="_blank" rel="noopener">Create the Firestore index →</a>`
+      : esc(err.message);
+
     grid.innerHTML = `
       <div class="plan-error">
-        ⚠ Could not load plans — ${esc(err.message)}<br><br>
+        ⚠ Could not load plans — ${body}<br><br>
         <code>${esc(BACKEND)}/api/plans</code><br>
         <button class="retry-btn" id="retry-plans">Retry</button>
       </div>`;

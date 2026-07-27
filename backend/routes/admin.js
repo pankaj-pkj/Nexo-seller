@@ -184,6 +184,30 @@ async function setKeyActive(req, res, isActive) {
 router.post('/keys/:id/deactivate', adminAuth, (req, res) => setKeyActive(req, res, false));
 router.post('/keys/:id/activate',   adminAuth, (req, res) => setKeyActive(req, res, true));
 
+// POST /api/admin/seed — writes the 4 default plans to Firestore.
+// Exists so the project can be set up from a phone, without a terminal to run
+// `npm run seed` in. Existing plans are skipped unless ?force=1.
+router.post('/seed', adminAuth, async (req, res) => {
+  try {
+    const { seedPlans } = require('../utils/seedPlans');
+    const { created, skipped } = await seedPlans({ force: req.query.force === '1' });
+
+    statsCache = { at: 0, data: null };
+    console.log(`[ADMIN] Seed → created: ${created.join(', ') || 'none'} | skipped: ${skipped.join(', ') || 'none'}`);
+    res.json({
+      success: true,
+      created,
+      skipped,
+      message: created.length
+        ? `Seeded ${created.length} plan(s)`
+        : 'All plans already exist — nothing changed'
+    });
+  } catch (err) {
+    console.error('[ADMIN/seed]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/admin/logs?limit=50 — recent gateway calls
 router.get('/logs', adminAuth, async (req, res) => {
   try {
