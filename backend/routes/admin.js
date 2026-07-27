@@ -208,6 +208,58 @@ router.post('/seed', adminAuth, async (req, res) => {
   }
 });
 
+// POST /api/admin/keys/create — issue a key by hand, with no payment.
+// Lets you test the gateway before Heleket is wired up, and hand out comp keys.
+router.post('/keys/create', adminAuth, async (req, res) => {
+  const email   = String(req.body?.email || '').trim().toLowerCase();
+  const planId  = String(req.body?.plan_id || '').trim();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ success: false, error: 'Valid email required' });
+  if (!planId)
+    return res.status(400).json({ success: false, error: 'plan_id required' });
+
+  try {
+    const planDoc = await db.collection('plans').doc(planId).get();
+    if (!planDoc.exists)
+      return res.status(404).json({ success: false, error: `Plan "${planId}" not found — seed the plans first` });
+
+    const plan = planDoc.data();
+    const { generateKey } = require('../utils/keygen');
+    const admin = require('../db/firebase').admin;
+
+    let expiresAt = null;
+    if (plan.duration_days !== null && plan.duration_days !== undefined) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + Number(plan.duration_days));
+    }
+
+    const subKey = generateKey();
+    await db.collection('api_keys').add({
+      user_email:     email,
+      sub_key:        subKey,
+      plan_id:        planId,
+      plan_name:      plan.name,
+      plan_color:     plan.color || '#6366F1',
+      api_target:     plan.api_target || 'api1',
+      expires_at:     expiresAt,
+      requests_used:  0,
+      requests_limit: plan.requests_limit ?? null,
+      is_active:      true,
+      payment_id:     `MANUAL-${Date.now()}`,   // marks it as issued by hand
+      last_used:      null,
+      created_at:     admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    statsCache = { at: 0, data: null };
+    console.log(`[ADMIN] Manual key ${subKey} → ${email} (${plan.name})`);
+    res.json({ success: true, sub_key: subKey, plan: plan.name, email });
+  } catch (err) {
+    console.error('[ADMIN/keys/create]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/admin/logs?limit=50 — recent gateway calls
 router.get('/logs', adminAuth, async (req, res) => {
   try {

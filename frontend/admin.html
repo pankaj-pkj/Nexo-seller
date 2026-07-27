@@ -63,6 +63,20 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 40px;display:fl
 .setup-btn:disabled{opacity:.55;transform:none}
 .setup-msg{font-size:.82rem;margin-top:12px;min-height:1.2em}
 
+/* Manual key issue */
+.issue-body{padding:22px 24px}
+.issue-p{font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:16px;max-width:640px}
+.issue-row{display:flex;gap:10px;flex-wrap:wrap}
+.issue-in{flex:1;min-width:170px;background:rgba(255,255,255,.04);border:1px solid var(--b1);border-radius:9px;padding:11px 14px;color:var(--txt);font-size:.85rem;outline:none;transition:border-color .25s}
+.issue-in:focus{border-color:var(--indigo)}
+select.issue-in{max-width:190px;cursor:pointer}
+select.issue-in option{background:#0a0f20;color:var(--txt)}
+.issue-btn{background:var(--grad);color:#fff;border:none;padding:11px 24px;border-radius:9px;font-size:.85rem;font-weight:700;transition:all .3s;white-space:nowrap}
+.issue-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:var(--glow-i)}
+.issue-btn:disabled{opacity:.55;transform:none}
+.issue-out{margin-top:14px;font-size:.82rem;min-height:1.2em;word-break:break-all}
+.issue-key{font-family:'JetBrains Mono',monospace;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.28);color:var(--green);border-radius:9px;padding:12px 14px;margin-top:10px;user-select:all}
+
 /* Plan breakdown */
 .breakdown{background:var(--card);border:1px solid var(--b1);border-radius:20px;padding:24px;margin-bottom:24px;animation:rise .6s ease both;display:none}
 .breakdown.show{display:block}
@@ -161,6 +175,25 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 40px;display:fl
       <div class="bd-title">Plan Distribution</div>
       <div id="bd-items"></div>
     </div>
+
+    <!-- Issue a key by hand — no payment needed -->
+    <section class="table-section">
+      <div class="ts-head">
+        <h2 class="ts-title">Issue a Key Manually</h2>
+        <span class="ts-count">no payment needed</span>
+      </div>
+      <div class="issue-body">
+        <p class="issue-p">Create a key without going through Heleket — useful for testing the gateway before payments are set up, or for handing out free access.</p>
+        <div class="issue-row">
+          <label for="iss-email" class="sr-only">Customer email</label>
+          <input type="email" id="iss-email" class="issue-in" placeholder="customer@example.com" autocomplete="off">
+          <label for="iss-plan" class="sr-only">Plan</label>
+          <select id="iss-plan" class="issue-in"></select>
+          <button class="issue-btn" id="iss-btn">Create Key</button>
+        </div>
+        <div class="issue-out" id="iss-out"></div>
+      </div>
+    </section>
 
     <!-- Payments -->
     <section class="table-section">
@@ -285,6 +318,16 @@ async function checkPlans() {
     const r = await fetch(`${BACKEND}/api/plans`);
     const d = await r.json();
     box.classList.toggle('show', !d.success || !d.plans?.length);
+
+    // Keep the manual-issue dropdown in sync with whatever plans exist
+    const sel = document.getElementById('iss-plan');
+    if (d.success && d.plans?.length) {
+      sel.innerHTML = d.plans.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+      sel.disabled = false;
+    } else {
+      sel.innerHTML = '<option>— seed plans first —</option>';
+      sel.disabled = true;
+    }
     // A missing composite index also lands here — say so instead of silently
     // showing a seed button that won't fix it.
     if (!d.success && /index/i.test(d.error || '')) {
@@ -435,6 +478,47 @@ document.getElementById('key-tbody').addEventListener('click', async e => {
 
 document.getElementById('pay-filter').addEventListener('input', renderPayments);
 document.getElementById('key-filter').addEventListener('input', renderKeys);
+
+// ── Issue a key by hand ───────────────────────────────────────
+document.getElementById('iss-btn').addEventListener('click', async e => {
+  const btn   = e.currentTarget;
+  const out   = document.getElementById('iss-out');
+  const email = document.getElementById('iss-email').value.trim().toLowerCase();
+  const plan  = document.getElementById('iss-plan').value;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    out.textContent = '✕ Enter a valid email';
+    out.style.color = 'var(--red)';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  out.textContent = '';
+
+  try {
+    const d = await api('/api/admin/keys/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, plan_id: plan })
+    });
+    if (!d.success) throw new Error(d.error || 'Could not create the key');
+
+    out.style.color = 'var(--dim)';
+    out.innerHTML = `✓ ${esc(d.plan)} key issued to ${esc(d.email)}
+      <div class="issue-key">${esc(d.sub_key)}</div>`;
+    toast('Key created', 'ok');
+    document.getElementById('iss-email').value = '';
+    await Promise.all([loadKeys(), loadStats(true)]);
+  } catch (err) {
+    if (err.message !== 'Unauthorized') {
+      out.textContent = '✕ ' + err.message;
+      out.style.color = 'var(--red)';
+    }
+  }
+  btn.disabled = false;
+  btn.textContent = 'Create Key';
+});
 </script>
 </body>
 </html>
