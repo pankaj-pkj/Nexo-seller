@@ -172,7 +172,9 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 
 | Variable | Purpose |
 |----------|---------|
-| `FIREBASE_PRIVATE_KEY` | Full PEM including `-----BEGIN/END-----`, with literal `\n` |
+| `FIREBASE_SERVICE_ACCOUNT` | The whole service-account JSON as one value — the easy path |
+| `FIREBASE_PROJECT_ID`/`_CLIENT_EMAIL`/`_PRIVATE_KEY` | The same thing split in three, if you prefer |
+| `SYNC_INTERVAL_MIN` | How often to re-check pending orders against Heleket (default 2) |
 | `REAL_API_BASE_URL_1` / `REAL_API_KEY_1` | The upstream API you are reselling |
 | `REAL_API_PATH_1` | Upstream path — defaults to `/admin/paid/key`, override if yours differs |
 | `DEFAULT_API_TARGET` | `api1`, `api2`, or `both` — which upstream(s) seeded plans use |
@@ -206,6 +208,10 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 | GET | `/api/admin/payments?limit=50` | Payment records |
 | GET | `/api/admin/logs?limit=50` | Recent gateway calls |
 | POST | `/api/admin/seed` | Write the 4 default plans (`?force=1` to overwrite) |
+| GET | `/api/admin/plans` | All plans, including hidden ones |
+| POST | `/api/admin/plans` | Create or update a plan |
+| DELETE | `/api/admin/plans/:id` | Delete a plan (existing keys unaffected) |
+| POST | `/api/admin/keys/create` | Issue a key by hand, no payment |
 | POST | `/api/admin/keys/:id/deactivate` | Kill a key |
 | POST | `/api/admin/keys/:id/activate` | Restore a key |
 
@@ -268,8 +274,16 @@ Response headers `X-Sources` and `X-Sources-Failed` list which APIs contributed.
 "never expires"; `requests_limit: null` means unlimited. The expiry cron and the validation
 middleware both check for null explicitly, so lifetime keys are never swept up.
 
-**Webhook idempotency.** Key minting runs inside a Firestore transaction keyed on the order
-document. Heleket retrying a callback — or firing it twice — can never mint a second key.
+**Webhook idempotency.** Key minting (`utils/fulfillOrder.js`) runs inside a Firestore
+transaction keyed on the order document. Heleket retrying a callback — or firing it twice —
+can never mint a second key.
+
+**Payments survive a missed webhook.** Webhooks do get lost: a wrong callback URL, or
+Render's free tier asleep when Heleket fires. A customer who paid and got no key is the
+worst failure this system has, so `utils/paymentSync.js` polls Heleket every couple of
+minutes for orders still marked pending and fulfils any that were paid. It shares the same
+transactional path as the webhook, so the two racing is harmless. Practically, this means
+the webhook is an optimisation, not a hard requirement.
 
 **Payment ordering.** The pending payment record is written *before* the Heleket invoice is
 created. If it were the other way round and the write failed, a customer could pay against an
@@ -320,8 +334,9 @@ service cloud.firestore {
 
 | What | Where |
 |------|-------|
-| Backend URL | `frontend/config.js` — one line |
+| Plan prices, durations, limits | Admin panel → **Plans** → New / Edit / Delete |
+| Backend URL | `frontend/config.js` — only in split-deploy mode |
 | Colours, fonts, spacing | `frontend/theme.css` |
-| Plan prices, limits, features | `backend/utils/seedPlans.js`, then `npm run seed` |
+| Default seeded plans | `backend/utils/seedPlans.js`, then `npm run seed` |
 | Plan icons and gradients | `planMeta` in `frontend/index.html` |
 | Upstream path | `REAL_API_PATH_1` / `REAL_API_PATH_2` env vars |

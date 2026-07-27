@@ -108,6 +108,9 @@ cron.schedule('0 0 * * *', async () => {
 // ── Auto-ping Render (prevents free-tier sleep) ───────────────
 require('./utils/ping').startAutoPing();
 
+// ── Payment fallback: catch orders whose webhook never arrived ─
+require('./utils/paymentSync').startPaymentSync();
+
 // ── Start ─────────────────────────────────────────────────────
 const PORT   = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {

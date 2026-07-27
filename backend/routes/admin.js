@@ -208,6 +208,128 @@ router.post('/seed', adminAuth, async (req, res) => {
   }
 });
 
+// ── Plan management ───────────────────────────────────────────
+
+/** Turns a plan name into a Firestore doc id: "Pro Plan 3" → "pro-plan-3" */
+const slugify = s => String(s).toLowerCase().trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+  .slice(0, 40);
+
+/** Duration in days from a {value, unit} pair. Lifetime → null. */
+function toDays(value, unit) {
+  if (unit === 'lifetime') return null;
+  const n = Math.max(1, Math.floor(Number(value) || 1));
+  return unit === 'year' ? n * 365 : unit === 'month' ? n * 30 : unit === 'week' ? n * 7 : n;
+}
+
+// GET /api/admin/plans — every plan, including inactive ones
+router.get('/plans', adminAuth, async (req, res) => {
+  try {
+    const snap = await db.collection('plans').get();
+    const plans = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+    res.json({ success: true, plans });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/admin/plans — create or update a plan
+router.post('/plans', adminAuth, async (req, res) => {
+  const b = req.body || {};
+  const name = String(b.name || '').trim();
+
+  if (!name)
+    return res.status(400).json({ success: false, error: 'Plan name is required' });
+
+  const price = Number(b.price_usd);
+  if (!(price > 0))
+    return res.status(400).json({ success: false, error: 'Price must be greater than 0' });
+
+  const unit = ['day', 'week', 'month', 'year', 'lifetime'].includes(b.duration_unit)
+    ? b.duration_unit : 'day';
+
+  // Blank / 0 / "unlimited" all mean no request cap
+  const rawLimit = b.requests_limit;
+  const requestsLimit = (rawLimit === '' || rawLimit === null || rawLimit === undefined || Number(rawLimit) <= 0)
+    ? null
+    : Math.floor(Number(rawLimit));
+
+  const id = String(b.id || '').trim() || slugify(name);
+  if (!id) return res.status(400).json({ success: false, error: 'Could not derive an id from that name' });
+
+  try {
+    const ref      = db.collection('plans').doc(id);
+    const existing = await ref.get();
+
+    // Keep a stable position: existing plans hold their slot, new ones go last
+    let order = Number(b.order);
+    if (!Number.isFinite(order)) {
+      if (existing.exists) order = existing.data().order ?? 99;
+      else {
+        const all = await db.collection('plans').get();
+        order = all.size + 1;
+      }
+    }
+
+    const durationDays = toDays(b.duration_value, unit);
+    const features = Array.isArray(b.features)
+      ? b.features.map(f => String(f).trim()).filter(Boolean)
+      : String(b.features || '').split('\n').map(f => f.trim()).filter(Boolean);
+
+    const data = {
+      name,
+      price_usd:      price,
+      duration_days:  durationDays,                 // null = lifetime
+      duration_unit:  unit,                         // kept for the edit form
+      duration_value: unit === 'lifetime' ? null : Math.max(1, Math.floor(Number(b.duration_value) || 1)),
+      requests_limit: requestsLimit,                // null = unlimited
+      description:    String(b.description || '').trim(),
+      features:       features.length ? features : [
+        requestsLimit ? `${requestsLimit.toLocaleString('en-US')} API Requests` : 'Unlimited API Requests',
+        durationDays ? `${durationDays} Day Access` : 'Never Expires'
+      ],
+      api_target:     ['api1', 'api2', 'both'].includes(b.api_target) ? b.api_target : (process.env.DEFAULT_API_TARGET || 'api1'),
+      color:          /^#[0-9A-Fa-f]{6}$/.test(b.color || '') ? b.color : '#6366F1',
+      is_active:      b.is_active !== false,
+      order
+    };
+
+    if (existing.exists) {
+      await ref.update(data);
+    } else {
+      await ref.set({ ...data, created_at: new Date() });
+    }
+
+    statsCache = { at: 0, data: null };
+    console.log(`[ADMIN] Plan ${existing.exists ? 'updated' : 'created'}: ${id} ($${price})`);
+    res.json({ success: true, id, plan: data, created: !existing.exists });
+  } catch (err) {
+    console.error('[ADMIN/plans]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/admin/plans/:id
+// Existing keys keep working — they carry their own limits and expiry, so
+// removing a plan only stops new purchases of it.
+router.delete('/plans/:id', adminAuth, async (req, res) => {
+  try {
+    const ref  = db.collection('plans').doc(req.params.id);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ success: false, error: 'Plan not found' });
+
+    await ref.delete();
+    statsCache = { at: 0, data: null };
+    console.log(`[ADMIN] Plan deleted: ${req.params.id}`);
+    res.json({ success: true, message: `Plan "${snap.data().name}" deleted. Existing keys are unaffected.` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // POST /api/admin/keys/create — issue a key by hand, with no payment.
 // Lets you test the gateway before Heleket is wired up, and hand out comp keys.
 router.post('/keys/create', adminAuth, async (req, res) => {

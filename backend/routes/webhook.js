@@ -1,8 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const crypto   = require('crypto');
-const { db, admin } = require('../db/firebase');
-const { generateKey } = require('../utils/keygen');
+const { fulfillOrder } = require('../utils/fulfillOrder');
 
 /**
  * Heleket signature:  md5( base64( json(sorted params without `sign`) ) + API_KEY )
@@ -41,52 +40,7 @@ router.post('/', async (req, res) => {
   if (!orderId) return res.status(400).json({ error: 'No order_id' });
 
   try {
-    const payRef = db.collection('payments').doc(orderId);
-    const keyRef = db.collection('api_keys').doc();
-
-    // One transaction for the whole thing: a webhook Heleket retries (or fires
-    // twice) can never mint a second key for the same order.
-    const result = await db.runTransaction(async tx => {
-      const payDoc = await tx.get(payRef);
-      if (!payDoc.exists) throw Object.assign(new Error('Order not found'), { status: 404 });
-
-      const order = payDoc.data();
-      if (order.status === 'paid') return { duplicate: true };
-
-      const planDoc = await tx.get(db.collection('plans').doc(order.plan_id));
-      if (!planDoc.exists) throw Object.assign(new Error(`Plan "${order.plan_id}" not found`), { status: 404 });
-      const plan = planDoc.data();
-
-      // duration_days null/undefined = lifetime, never expires
-      let expiresAt = null;
-      if (plan.duration_days !== null && plan.duration_days !== undefined) {
-        expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + Number(plan.duration_days));
-      }
-
-      const subKey = generateKey();
-      tx.set(keyRef, {
-        user_email:     order.user_email,
-        sub_key:        subKey,
-        plan_id:        order.plan_id,
-        plan_name:      plan.name,
-        plan_color:     plan.color || '#6366F1',
-        api_target:     plan.api_target || 'api1',
-        expires_at:     expiresAt,                          // null = lifetime
-        requests_used:  0,
-        requests_limit: plan.requests_limit ?? null,        // null = unlimited
-        is_active:      true,
-        payment_id:     orderId,
-        last_used:      null,
-        created_at:     admin.firestore.FieldValue.serverTimestamp()
-      });
-      tx.update(payRef, {
-        status:  'paid',
-        paid_at: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      return { duplicate: false, subKey, planName: plan.name, expiresAt, email: order.user_email };
-    });
+    const result = await fulfillOrder(orderId);
 
     if (result.duplicate) {
       console.log(`[WEBHOOK] ${orderId} already processed — no-op`);
