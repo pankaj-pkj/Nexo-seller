@@ -18,12 +18,15 @@ Customer → GET /admin/paid/key?key=NK-XXX&num=919876543210
 
 ## Stack
 
-| Layer     | Service       | Free Tier                   |
-|-----------|---------------|-----------------------------|
-| Backend   | Render.com    | 750 hrs/month               |
-| Database  | Firebase      | 1 GB storage, 50K reads/day |
-| Frontend  | Vercel        | Unlimited                   |
-| Payments  | Heleket       | 0% commission               |
+| Layer | Service | Free tier |
+|-------|---------|-----------|
+| App (API + pages) | **Vercel** — serverless, never sleeps | 100 GB bandwidth/mo |
+| Database | **Firebase Firestore** | 1 GB, 50K reads/day |
+| Payments | **Heleket** | 0% commission, USDT |
+
+Render works too — `render.yaml` and `backend/server.js` are set up for it — but
+its free tier sleeps after 15 minutes of inactivity, so Vercel is the better
+default.
 
 ---
 
@@ -31,69 +34,72 @@ Customer → GET /admin/paid/key?key=NK-XXX&num=919876543210
 
 ```
 .
-├── render.yaml                     Render Blueprint (backend service)
-├── vercel.json                     Vercel static config for frontend/
+├── SETUP.md                        ⭐ Start here — full deployment walkthrough
+├── package.json                    Root manifest (Vercel installs from this)
+├── vercel.json                     Routes everything to api/index.js + cron jobs
+├── render.yaml                     Render Blueprint, for the Render path
+├── api/
+│   └── index.js                    Vercel serverless entry — exports backend/app.js
 ├── backend/
-│   ├── server.js                   Express app, cron, graceful shutdown
-│   ├── package.json
-│   ├── .env.example                Copy → .env and fill in
+│   ├── app.js                      The Express app (no server, no timers)
+│   ├── server.js                   Long-lived server: app + cron + ping + poller
+│   ├── .env.example                Copy → .env for local development
 │   ├── db/
-│   │   └── firebase.js             Firebase Admin SDK init (env vars only)
+│   │   └── firebase.js             Admin SDK init — whole JSON, or 3 separate vars
 │   ├── middleware/
-│   │   ├── validateKey.js          Sub-key validation
+│   │   ├── validateKey.js          Sub-key validation, expiry and quota checks
 │   │   └── rateLimit.js            In-memory throttle (login, payments, lookups)
 │   ├── routes/
 │   │   ├── plans.js                GET  /api/plans
-│   │   ├── payment.js              POST /api/payment/create
+│   │   ├── payment.js              POST /api/payment/create, GET /status/:orderId
 │   │   ├── webhook.js              POST /api/webhook  (Heleket callback)
 │   │   ├── keys.js                 GET  /api/key/:email, /api/key/check/:subkey
 │   │   ├── proxy.js                GET  /admin/paid/key  ← MAIN GATEWAY
-│   │   └── admin.js                GET/POST /api/admin/*
+│   │   ├── admin.js                 /api/admin/* — stats, keys, plans CRUD, seed
+│   │   └── cron.js                 /api/cron/* — for Vercel Cron
 │   └── utils/
 │       ├── keygen.js               NK-XXXX key generator
-│       ├── expiry.js               Daily cron cleanup
-│       ├── ping.js                 Render auto-ping (prevents sleep)
-│       └── seedPlans.js            Run once to seed the 4 plans
-└── frontend/
-    ├── config.js                   ⭐ THE ONLY FILE YOU EDIT AFTER DEPLOY
+│       ├── fulfillOrder.js         The one place money becomes a key
+│       ├── paymentSync.js          Recovers orders whose webhook never arrived
+│       ├── expiry.js               Marks expired keys inactive
+│       ├── ping.js                 Render self-ping (prevents free-tier sleep)
+│       └── seedPlans.js            The 4 default plans + seeding logic
+└── frontend/                       Served by the backend — no separate deploy
+    ├── config.js                   Backend URL (blank = same origin) + helpers
     ├── theme.css                   Shared design system
     ├── index.html                  Landing page + plan selection
     ├── pay.html                    Payment status + key reveal
-    ├── dashboard.html              User key management
-    ├── admin.html                  Admin panel (password protected)
+    ├── dashboard.html              Customer key management
+    ├── admin.html                  Admin panel — stats, plans, keys
     └── docs.html                   API documentation
 ```
 
 ---
 
-## Quick Start (local)
+## Setup
+
+**→ [SETUP.md](SETUP.md) is the full walkthrough: Firebase, Vercel, Heleket, step by
+step, written to be followed from a phone.** Start there.
+
+The short version: create a Firebase project, import this repo at Vercel with the
+**repository root** as the root directory, paste the Firebase service-account JSON
+into `FIREBASE_SERVICE_ACCOUNT`, set `ADMIN_SECRET` and your upstream API URL, deploy.
+Then open `/admin.html` and click **Seed default plans**.
+
+### Running it locally (optional)
 
 ```bash
-# 1. Backend
-cd backend
-cp .env.example .env      # fill in Firebase + Heleket + ADMIN_SECRET
 npm install
-npm run seed              # one-time: writes the 4 plans to Firestore
-npm run dev               # http://localhost:3000
-
-# 2. Frontend — any static server on another port
-cd ../frontend
-python3 -m http.server 8080   # http://localhost:8080
+npm run dev        # http://localhost:3000 — serves the API and the pages
 ```
 
-`frontend/config.js` auto-detects localhost and talks to `http://localhost:3000`,
-so there is nothing to edit while developing.
+Fill in `backend/.env` from `backend/.env.example` first. `frontend/config.js`
+resolves to the same origin, so there is nothing to edit while developing.
 
-### No terminal? (setting up from a phone)
-
-The whole local step is optional — it only exists to test before deploying. The one
-thing you can't skip is seeding the plans, so there is a no-terminal path for it:
-deploy first, open `admin.html`, log in, and a **Seed default plans** button appears
-whenever the `plans` collection is empty. It calls `POST /api/admin/seed`, which does
-exactly what `npm run seed` does.
-
-Existing plans are never overwritten. To reset prices back to the defaults, use
-`npm run seed -- --force` or `POST /api/admin/seed?force=1`.
+`npm run seed` writes the four default plans; the admin panel's **Seed default
+plans** button does the same thing without a terminal. Neither overwrites plans that
+already exist — use `npm run seed -- --force` or `POST /api/admin/seed?force=1` to
+reset them.
 
 ### Firestore indexes — none needed
 
@@ -134,36 +140,22 @@ a live check from the payment page. Nothing is lost.
 `render.yaml`) or set Root Directory `backend`, build `npm install`, start
 `npm start`.
 
----
+If you want the pages on their own static host instead, deploy `frontend/` there and
+fill in `BACKEND_URL` at the top of `frontend/config.js`. Left empty, the pages talk
+to their own origin — which is what makes the single-deploy setup need no config.
 
-### Render settings in detail
+### After deploying, either way
 
-Either import this repo as a **Blueprint** (Render reads `render.yaml`), or create a
-Web Service manually with:
-
-- **Root Directory:** `backend`
-- **Build Command:** `npm install`
-- **Start Command:** `npm start`
-- **Health Check Path:** `/health`
-
-Then set every variable from `backend/.env.example` in the Render dashboard.
-
-### Hosting the frontend separately
-
-Not required, and not recommended — but if you want the pages on their own static
-host, deploy `frontend/` there and fill in `BACKEND_URL` at the top of
-`frontend/config.js`. Left empty, the pages talk to their own origin.
-
-### After deploying
-
-1. Set `BACKEND_URL` and `RENDER_URL` in Render to your own Render URL.
-2. In Heleket, point the webhook at `https://<backend>/api/webhook`.
-3. Open `/admin.html`, log in, and click **Seed default plans**.
-4. Smoke-test:
+1. Set `BACKEND_URL` to your own deployed URL, and redeploy.
+2. Open `/admin.html`, log in, and click **Seed default plans**.
+3. Smoke-test:
    ```bash
-   curl https://<backend>/health
-   curl https://<backend>/api/plans
+   curl https://<your-url>/health
+   curl https://<your-url>/api/plans
    ```
+4. Issue a key from the admin panel and call the gateway with it.
+5. Point the Heleket webhook at `https://<your-url>/api/webhook` when you're ready
+   to take payments.
 
 ---
 
@@ -295,18 +287,28 @@ order the webhook cannot find.
 
 ---
 
-## Cron jobs
+## Scheduled work
 
-| Schedule | Task |
-|----------|------|
-| `0 0 * * *` | Expire keys past `expires_at` (batched in chunks of 450) |
-| every 14 min | Ping `/health` so Render's free tier does not sleep |
+| Task | On Vercel | On Render |
+|------|-----------|-----------|
+| Expire keys past `expires_at` | `/api/cron/expire`, daily (Vercel Cron) | in-process cron, daily |
+| Recover payments the webhook missed | `/api/cron/sync-payments`, hourly | in-process poller, every 2 min |
+| Keep the free tier awake | not needed | `/health` self-ping every 14 min |
+
+None of this gates access. **Expiry and request limits are enforced on every single
+request** in `validateKey`; the scheduled sweep only tidies up the `is_active` flag
+afterwards. A cron that never fires cannot let an expired key through.
+
+Payments have a third path on top of the two above: while a customer waits on
+`pay.html`, the page polls `/api/payment/status/:orderId`, which asks Heleket about
+that order directly and issues the key the moment it reads paid.
 
 ---
 
 ## Security notes
 
-- Real upstream keys live only in Render env vars — never in code, never in Firestore.
+- Real upstream keys live only in host environment variables — never in code, never in
+  Firestore, and never in a response the customer can see.
 - Admin auth compares the token in constant time and throttles login to 8 tries / 5 min / IP.
 - Webhook signatures are verified before anything is written.
 - The frontend has no database access; everything goes through the backend.
