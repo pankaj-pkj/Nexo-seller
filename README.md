@@ -156,6 +156,7 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 | `FIREBASE_PRIVATE_KEY` | Full PEM including `-----BEGIN/END-----`, with literal `\n` |
 | `REAL_API_BASE_URL_1` / `REAL_API_KEY_1` | The upstream API you are reselling |
 | `REAL_API_PATH_1` | Upstream path — defaults to `/admin/paid/key`, override if yours differs |
+| `DEFAULT_API_TARGET` | `api1`, `api2`, or `both` — which upstream(s) seeded plans use |
 | `UPSTREAM_TIMEOUT_MS` | How long to wait upstream before returning `504` (default 30000) |
 | `ADMIN_SECRET` | Admin panel password. Use something long |
 | `RENDER_URL` | Enables the 14-minute self-ping that keeps the free tier awake |
@@ -203,6 +204,42 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 | 504 | Upstream timed out |
 
 Failed upstream calls (502 / 504) do **not** count against the customer's quota.
+
+---
+
+## Combining two upstream APIs
+
+A plan's `api_target` decides where its keys route:
+
+| `api_target` | Behaviour |
+|---|---|
+| `api1` / `api2` | One upstream. The response passes through byte-for-byte. |
+| `both` | Both upstreams are called **in parallel** and merged into one response. |
+
+Set `DEFAULT_API_TARGET=both` and re-seed with force to switch every plan over.
+
+A combined response looks like this:
+
+```json
+{
+  "success": true,
+  "partial": false,
+  "data":   { "name": "…", "operator": "…", "city": "…", "circle": "…" },
+  "sources": {
+    "api1": { "name": "…", "operator": "…" },
+    "api2": { "city": "…", "circle": "…" }
+  }
+}
+```
+
+- `data` is a shallow merge of both APIs. If both return the same field name,
+  api2 wins — which is why the untouched originals stay under `sources`.
+- `partial: true` means one API answered and the other didn't. You still get the
+  half that worked, and `X-Sources-Failed` names the one that broke.
+- The call only costs the customer **one request** even though two go out.
+- If *both* fail, the response is `502` and no quota is consumed.
+
+Response headers `X-Sources` and `X-Sources-Failed` list which APIs contributed.
 
 ---
 

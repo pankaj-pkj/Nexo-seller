@@ -9,6 +9,17 @@
 require('dotenv').config();
 const { db } = require('../db/firebase');
 
+/**
+ * Which upstream(s) every seeded plan proxies to:
+ *   'api1'  — only the first upstream
+ *   'api2'  — only the second
+ *   'both'  — call both in parallel and merge the responses into one
+ *
+ * Set DEFAULT_API_TARGET in the environment to change it, then re-seed with
+ * force. Per-plan values can still be edited directly in Firestore afterwards.
+ */
+const API_TARGET = process.env.DEFAULT_API_TARGET || 'api1';
+
 const plans = [
   {
     id:             'daily',
@@ -18,7 +29,7 @@ const plans = [
     requests_limit: 100,
     description:    'Perfect for quick testing',
     features:       ['100 API Requests', '1 Day Access', 'Full Endpoint Coverage', 'Basic Support'],
-    api_target:     'api1',
+    api_target:     API_TARGET,
     color:          '#3B82F6',
     is_active:      true,
     order:          1
@@ -31,7 +42,7 @@ const plans = [
     requests_limit: 1000,
     description:    'Great for small projects',
     features:       ['1,000 API Requests', '7 Day Access', 'Full Endpoint Coverage', 'Email Support'],
-    api_target:     'api1',
+    api_target:     API_TARGET,
     color:          '#8B5CF6',
     is_active:      true,
     order:          2
@@ -44,7 +55,7 @@ const plans = [
     requests_limit: 10000,
     description:    'Best for growing applications',
     features:       ['10,000 API Requests', '30 Day Access', 'Full Endpoint Coverage', 'Priority Support', 'Usage Analytics'],
-    api_target:     'api1',
+    api_target:     API_TARGET,
     color:          '#6366F1',
     is_active:      true,
     order:          3
@@ -57,7 +68,7 @@ const plans = [
     requests_limit: null,   // null = unlimited
     description:    'One-time payment, forever access',
     features:       ['Unlimited API Requests', 'Never Expires', 'Full Endpoint Coverage', '24/7 Priority Support', 'Usage Analytics', 'Early Access to New APIs'],
-    api_target:     'api1',
+    api_target:     API_TARGET,
     color:          '#F59E0B',
     is_active:      true,
     order:          4
