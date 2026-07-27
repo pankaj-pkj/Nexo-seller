@@ -110,31 +110,33 @@ it that way when adding queries.
 
 ## Deploying
 
-There are two ways to run this. Pick one.
+Backend and frontend ship as one unit either way — `backend/app.js` serves
+`frontend/` itself, so there is no second deploy and nothing to configure in
+`config.js`.
 
-### Option A — one deploy (simplest)
+**Step-by-step instructions, including Heleket: [SETUP.md](SETUP.md).**
 
-Render runs the backend **and** serves the frontend from the same host. No Vercel
-account, no second deploy, and nothing to configure in `config.js` — the pages talk
-to their own origin.
+### Option A — Vercel (serverless)
 
-1. Render → **New → Blueprint** → pick this repo (it reads `render.yaml`).
-2. Fill in the env vars (see below).
-3. Open `https://your-app.onrender.com` — the landing page is right there, with
-   `/admin.html`, `/dashboard.html` and `/docs.html` alongside it.
+`api/index.js` exports the Express app; `vercel.json` rewrites every route to it
+and registers two cron jobs. Import the repo at Vercel with the **repository root**
+as the root directory — not `backend/` — and add the env vars.
 
-`FRONTEND_URL` and `HELEKET_RETURN` can stay empty; they are derived from
-`BACKEND_URL`.
+Because a serverless process is frozen between requests, the in-process cron and
+the payment poller don't run there. Their work happens through `/api/cron/expire`
+and `/api/cron/sync-payments` (Vercel Cron, authenticated with `CRON_SECRET`), plus
+a live check from the payment page. Nothing is lost.
 
-### Option B — split deploy (backend on Render, frontend on Vercel)
+### Option B — Render (long-lived Node)
 
-Use this when you want the frontend on a CDN. Extra steps: a Vercel project with
-root directory `frontend`, plus filling in `BACKEND_URL` inside `frontend/config.js`
-so the pages know where the API lives.
+`backend/server.js` runs the same app and keeps the cron, the self-ping and the
+2-minute payment poller in-process. Import as a **Blueprint** (it reads
+`render.yaml`) or set Root Directory `backend`, build `npm install`, start
+`npm start`.
 
 ---
 
-### Backend → Render
+### Render settings in detail
 
 Either import this repo as a **Blueprint** (Render reads `render.yaml`), or create a
 Web Service manually with:
@@ -146,12 +148,11 @@ Web Service manually with:
 
 Then set every variable from `backend/.env.example` in the Render dashboard.
 
-### Frontend → Vercel (Option B only)
+### Hosting the frontend separately
 
-- **Framework:** Other (static)
-- **Root Directory:** `frontend`
-
-Then set `BACKEND_URL` in `frontend/config.js` and `FRONTEND_URL` in Render.
+Not required, and not recommended — but if you want the pages on their own static
+host, deploy `frontend/` there and fill in `BACKEND_URL` at the top of
+`frontend/config.js`. Left empty, the pages talk to their own origin.
 
 ### After deploying
 

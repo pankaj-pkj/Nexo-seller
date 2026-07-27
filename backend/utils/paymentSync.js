@@ -44,6 +44,34 @@ async function fetchStatus(orderId) {
 }
 
 /**
+ * Checks one order against Heleket and fulfils it if it has been paid.
+ * Used by the payment page's polling, so a customer gets their key the moment
+ * the payment lands — no waiting on a webhook or a background sweep.
+ *
+ * @returns {{paid: boolean, issued: boolean}}
+ */
+async function checkAndFulfil(orderId) {
+  if (!process.env.HELEKET_MERCHANT || !process.env.HELEKET_API_KEY)
+    return { paid: false, issued: false };
+
+  let status;
+  try {
+    status = await fetchStatus(orderId);
+  } catch (err) {
+    console.warn(`[SYNC] ${orderId}: ${err.message}`);
+    return { paid: false, issued: false };
+  }
+
+  if (!isPaid(status)) return { paid: false, issued: false };
+
+  const result = await fulfillOrder(orderId);
+  if (!result.duplicate)
+    console.log(`[SYNC] ✅ ${orderId} paid — issued ${result.subKey} to ${result.email}`);
+
+  return { paid: true, issued: !result.duplicate };
+}
+
+/**
  * One sweep over recent pending orders.
  * @returns number of orders fulfilled
  */
@@ -101,4 +129,4 @@ function startPaymentSync() {
   console.log(`[SYNC] Payment fallback active — checking pending orders every ${minutes} min`);
 }
 
-module.exports = { startPaymentSync, syncPendingPayments };
+module.exports = { startPaymentSync, syncPendingPayments, checkAndFulfil };

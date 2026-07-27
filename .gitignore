@@ -8,3 +8,4 @@ firebase-service-account.json
 .vercel
 .idea/
 .vscode/
+.vercel/

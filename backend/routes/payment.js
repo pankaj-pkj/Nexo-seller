@@ -108,4 +108,46 @@ router.post('/create', createLimit, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/payment/status/:orderId
+ *
+ * The payment page polls this while it waits. It asks Heleket directly about
+ * the order and mints the key the moment Heleket says paid — so the customer
+ * gets their key even if the webhook never fires and even on a serverless host
+ * where no background poller can run.
+ *
+ * Throttled because it is public and each call hits Heleket.
+ */
+const statusLimit = require('../middleware/rateLimit')({
+  windowMs: 60_000, max: 40, message: 'Slow down'
+});
+
+router.get('/status/:orderId', statusLimit, async (req, res) => {
+  const orderId = String(req.params.orderId || '').trim();
+  if (!/^NX[0-9A-F]{1,20}$/i.test(orderId))
+    return res.status(400).json({ success: false, error: 'Invalid order id' });
+
+  try {
+    const payDoc = await db.collection('payments').doc(orderId).get();
+    if (!payDoc.exists) return res.status(404).json({ success: false, error: 'Order not found' });
+
+    const order = payDoc.data();
+    if (order.status === 'paid')
+      return res.json({ success: true, status: 'paid', already: true });
+
+    // Still pending locally — ask Heleket whether that is still true
+    const { checkAndFulfil } = require('../utils/paymentSync');
+    const result = await checkAndFulfil(orderId);
+
+    res.json({
+      success: true,
+      status:  result.paid ? 'paid' : (order.status || 'pending'),
+      issued:  Boolean(result.issued)
+    });
+  } catch (err) {
+    console.error('[PAYMENT/status]', err.message);
+    res.status(500).json({ success: false, error: 'Could not check payment status' });
+  }
+});
+
 module.exports = router;

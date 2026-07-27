@@ -182,6 +182,14 @@ async function check() {
   // The bar tracks real progress toward the 3-minute cut-off, not a fake loop
   document.getElementById('tbar').style.width = `${Math.min(100, (attempts / MAX) * 100)}%`;
 
+  // Nudge the backend to ask Heleket about this order directly. That is what
+  // makes the key arrive without a working webhook — and on serverless hosts,
+  // where nothing can poll in the background, it is the only thing that does.
+  if (orderId) {
+    try { await api(`/api/payment/status/${encodeURIComponent(orderId)}`); }
+    catch (e) { console.warn('[pay] status check:', e.message); }
+  }
+
   try {
     const d = await api(`/api/key/${encodeURIComponent(email)}`);
     if (d.success && d.keys?.length) {
