@@ -114,6 +114,30 @@ confirm, wait a minute.
 
 ## Deploying
 
+There are two ways to run this. Pick one.
+
+### Option A — one deploy (simplest)
+
+Render runs the backend **and** serves the frontend from the same host. No Vercel
+account, no second deploy, and nothing to configure in `config.js` — the pages talk
+to their own origin.
+
+1. Render → **New → Blueprint** → pick this repo (it reads `render.yaml`).
+2. Fill in the env vars (see below).
+3. Open `https://your-app.onrender.com` — the landing page is right there, with
+   `/admin.html`, `/dashboard.html` and `/docs.html` alongside it.
+
+`FRONTEND_URL` and `HELEKET_RETURN` can stay empty; they are derived from
+`BACKEND_URL`.
+
+### Option B — split deploy (backend on Render, frontend on Vercel)
+
+Use this when you want the frontend on a CDN. Extra steps: a Vercel project with
+root directory `frontend`, plus filling in `BACKEND_URL` inside `frontend/config.js`
+so the pages know where the API lives.
+
+---
+
 ### Backend → Render
 
 Either import this repo as a **Blueprint** (Render reads `render.yaml`), or create a
@@ -126,19 +150,18 @@ Web Service manually with:
 
 Then set every variable from `backend/.env.example` in the Render dashboard.
 
-### Frontend → Vercel
+### Frontend → Vercel (Option B only)
 
 - **Framework:** Other (static)
 - **Root Directory:** `frontend`
 
-### After both are live
+Then set `BACKEND_URL` in `frontend/config.js` and `FRONTEND_URL` in Render.
 
-1. Edit **one line** in `frontend/config.js`:
-   ```js
-   const BACKEND_URL = 'https://your-app.onrender.com';
-   ```
-2. In Render, set `BACKEND_URL`, `FRONTEND_URL`, `HELEKET_RETURN` and `RENDER_URL`.
-3. In Heleket, point the webhook at `https://<backend>/api/webhook`.
+### After deploying
+
+1. Set `BACKEND_URL` and `RENDER_URL` in Render to your own Render URL.
+2. In Heleket, point the webhook at `https://<backend>/api/webhook`.
+3. Open `/admin.html`, log in, and click **Seed default plans**.
 4. Smoke-test:
    ```bash
    curl https://<backend>/health

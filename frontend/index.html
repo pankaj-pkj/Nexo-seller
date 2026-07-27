@@ -349,7 +349,7 @@ footer a:hover{text-decoration:underline}
 
 <script src="config.js"></script>
 <script>
-const { BACKEND, esc, toast, api, reducedMotion } = window.NEXAPI;
+const { BACKEND, ORIGIN, esc, toast, api, reducedMotion } = window.NEXAPI;
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // ── Particles ─────────────────────────────────────────────────
@@ -407,7 +407,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
   const el = document.getElementById('term-out');
   if (!el) return;
 
-  const host  = BACKEND.replace(/^https?:\/\//, '');
+  const host  = ORIGIN.replace(/^https?:\/\//, '');
   const lines = [
     { t: 'prompt',  v: '$ ' },
     { t: 'url',     v: `GET ${host}/admin/paid/key` },
@@ -540,7 +540,7 @@ async function loadPlans() {
     grid.innerHTML = `
       <div class="plan-error">
         ⚠ Could not load plans — ${body}<br><br>
-        <code>${esc(BACKEND)}/api/plans</code><br>
+        <code>${esc(ORIGIN)}/api/plans</code><br>
         <button class="retry-btn" id="retry-plans">Retry</button>
       </div>`;
     document.getElementById('retry-plans').addEventListener('click', () => {

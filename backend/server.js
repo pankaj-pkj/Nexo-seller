@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const cron    = require('node-cron');
+const path    = require('path');
+const fs      = require('fs');
 
 const app = express();
 
@@ -49,14 +51,36 @@ app.get('/health', (req, res) => res.json({
   timestamp: new Date().toISOString()
 }));
 
-app.get('/', (req, res) => res.json({
-  gateway: 'NexAPI v2',
-  docs:    process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/docs.html` : undefined,
-  health:  '/health'
-}));
+// ── Frontend ──────────────────────────────────────────────────
+// Single-deploy mode: this server also serves frontend/, so the whole product
+// runs on one host with no separate static deploy and no cross-origin config.
+// Hosting the frontend elsewhere (Vercel) still works — this just goes unused.
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+const hasFrontend  = fs.existsSync(path.join(FRONTEND_DIR, 'index.html'));
+
+if (hasFrontend) {
+  app.use(express.static(FRONTEND_DIR, {
+    extensions: ['html'],           // /docs → docs.html
+    setHeaders: (res, filePath) => {
+      // config.js and theme.css change on redeploy — never let them stick
+      if (/config\.js$|theme\.css$/.test(filePath)) res.set('Cache-Control', 'no-cache');
+    }
+  }));
+  console.log(`[STATIC] Serving frontend from ${FRONTEND_DIR}`);
+} else {
+  app.get('/', (req, res) => res.json({
+    gateway: 'NexAPI v2',
+    docs:    process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/docs.html` : undefined,
+    health:  '/health'
+  }));
+}
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use((req, res) => {
+  // Browsers asking for a page get a page; API clients get JSON
+  if (hasFrontend && req.method === 'GET' && (req.headers.accept || '').includes('text/html'))
+    return res.status(404).sendFile(path.join(FRONTEND_DIR, 'index.html'));
+
   res.status(404).json({ success: false, error: 'Not found', path: req.originalUrl });
 });
 

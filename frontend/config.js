@@ -1,18 +1,32 @@
 /* ============================================================
    NexAPI — shared frontend config + helpers
    ------------------------------------------------------------
-   👉 THE ONLY LINE YOU NEED TO CHANGE AFTER DEPLOYING:
+   LEAVE THIS ALONE if the backend also serves these pages
+   (single-deploy mode) — same-origin requests just work.
+
+   ONLY fill it in when the frontend is hosted separately, e.g.
+   on Vercel while the backend runs on Render:
    ============================================================ */
-const BACKEND_URL = 'https://your-backend.onrender.com';
+const BACKEND_URL = '';
 /* ========================================================== */
 
 (function () {
   'use strict';
 
-  // Running from a local file or localhost? Talk to a local backend instead,
-  // so you never have to edit this file just to test on your machine.
-  const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-  const BACKEND = isLocal ? 'http://localhost:3000' : BACKEND_URL.replace(/\/+$/, '');
+  const configured = (BACKEND_URL || '').trim().replace(/\/+$/, '');
+  const isLocal    = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+
+  // Resolution order:
+  //   1. BACKEND_URL filled in      → split deploy, use it
+  //   2. local dev on another port  → backend is on :3000
+  //   3. otherwise                  → same origin ('' = relative URLs)
+  const BACKEND = configured
+    ? configured
+    : (isLocal && location.port !== '3000' ? 'http://localhost:3000' : '');
+
+  // Absolute base — for anything a user copies out of the page (curl samples,
+  // call URLs), where a relative path would be useless.
+  const ORIGIN = BACKEND || location.origin;
 
   /** Escape anything that came from the API before putting it in innerHTML. */
   const esc = v => String(v ?? '').replace(/[&<>"'`]/g, c => ({
@@ -74,7 +88,7 @@ const BACKEND_URL = 'https://your-backend.onrender.com';
     const res = await fetch(`${BACKEND}${path}`, opts);
     let body;
     try { body = await res.json(); }
-    catch { throw new Error(`Backend returned ${res.status} (not JSON) — is ${BACKEND} awake?`); }
+    catch { throw new Error(`Backend returned ${res.status} (not JSON) — is ${ORIGIN} awake?`); }
     if (!res.ok && body?.error) throw new Error(body.error);
     return body;
   }
@@ -101,5 +115,5 @@ const BACKEND_URL = 'https://your-backend.onrender.com';
   );
   document.head.appendChild(favicon);
 
-  window.NEXAPI = { BACKEND, esc, copy, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion };
+  window.NEXAPI = { BACKEND, ORIGIN, esc, copy, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion };
 })();

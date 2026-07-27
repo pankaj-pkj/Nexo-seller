@@ -252,20 +252,20 @@ h1.page-h{font-size:2.2rem;font-weight:800;letter-spacing:-1px;margin-bottom:8px
 
 <script src="config.js"></script>
 <script>
-const { BACKEND, esc, copyBtn, toast, api, fmtNum } = window.NEXAPI;
+const { BACKEND, ORIGIN, esc, copyBtn, toast, api, fmtNum } = window.NEXAPI;
 
-document.getElementById('base-url').textContent = BACKEND;
+document.getElementById('base-url').textContent = ORIGIN;
 
 // ── Code samples, rendered from the live BACKEND value ────────
 const KEY = 'NK-YOUR-KEY';
 document.getElementById('qs-curl').innerHTML =
-  `curl "<span class="c1">${esc(BACKEND)}/admin/paid/key</span><span class="c3">?key=${KEY}&amp;num=919876543210</span>"`;
+  `curl "<span class="c1">${esc(ORIGIN)}/admin/paid/key</span><span class="c3">?key=${KEY}&amp;num=919876543210</span>"`;
 
 document.getElementById('qs-py').innerHTML =
-  `<span class="c4">import</span> requests\n\nres = requests.get(\n    <span class="c2">"${esc(BACKEND)}/admin/paid/key"</span>,\n    params={<span class="c2">"key"</span>: <span class="c2">"${KEY}"</span>, <span class="c2">"num"</span>: <span class="c2">"919876543210"</span>}\n)\n<span class="c4">print</span>(res.json())`;
+  `<span class="c4">import</span> requests\n\nres = requests.get(\n    <span class="c2">"${esc(ORIGIN)}/admin/paid/key"</span>,\n    params={<span class="c2">"key"</span>: <span class="c2">"${KEY}"</span>, <span class="c2">"num"</span>: <span class="c2">"919876543210"</span>}\n)\n<span class="c4">print</span>(res.json())`;
 
 document.getElementById('qs-js').innerHTML =
-  `<span class="c4">const</span> res = <span class="c4">await</span> fetch(\n  <span class="c2">"${esc(BACKEND)}/admin/paid/key?key=${KEY}&amp;num=919876543210"</span>\n);\n<span class="c4">const</span> data = <span class="c4">await</span> res.json();\nconsole.log(data);`;
+  `<span class="c4">const</span> res = <span class="c4">await</span> fetch(\n  <span class="c2">"${esc(ORIGIN)}/admin/paid/key?key=${KEY}&amp;num=919876543210"</span>\n);\n<span class="c4">const</span> data = <span class="c4">await</span> res.json();\nconsole.log(data);`;
 
 document.querySelectorAll('[data-copy-target]').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -306,7 +306,7 @@ async function tryIt() {
   tryOut.style.color = 'var(--dim)';
 
   try {
-    const url = new URL(`${BACKEND}/admin/paid/key`);
+    const url = new URL(`${ORIGIN}/admin/paid/key`);
     url.searchParams.set('key', key);
     if (num) url.searchParams.set('num', num);
 
@@ -327,7 +327,7 @@ async function tryIt() {
       (gwHeaders ? gwHeaders + '\n' : '') + '\n' + pretty;
     tryOut.style.color = r.ok ? '#86EFAC' : '#FCA5A5';
   } catch (e) {
-    tryOut.textContent = `Request failed: ${e.message}\n\nIf this says "Failed to fetch", the backend at ${BACKEND} may be asleep or unreachable.`;
+    tryOut.textContent = `Request failed: ${e.message}\n\nIf this says "Failed to fetch", the backend at ${ORIGIN} may be asleep or unreachable.`;
     tryOut.style.color = '#FCA5A5';
   }
   tryBtn.disabled = false;

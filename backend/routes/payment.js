@@ -26,10 +26,15 @@ router.post('/create', createLimit, async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
     return res.status(400).json({ success: false, error: 'Invalid email' });
 
-  for (const v of ['HELEKET_MERCHANT', 'HELEKET_API_KEY', 'HELEKET_BASE_URL', 'BACKEND_URL', 'HELEKET_RETURN']) {
+  for (const v of ['HELEKET_MERCHANT', 'HELEKET_API_KEY', 'HELEKET_BASE_URL', 'BACKEND_URL']) {
     if (!process.env[v])
       return res.status(500).json({ success: false, error: `Payments not configured (${v} missing)` });
   }
+
+  // In single-deploy mode pay.html sits on the backend itself, so the return
+  // URL can be derived — one less env var to get wrong.
+  const returnBase = process.env.HELEKET_RETURN
+    || `${(process.env.FRONTEND_URL || process.env.BACKEND_URL).replace(/\/+$/, '')}/pay.html`;
 
   try {
     const planDoc = await db.collection('plans').doc(plan_id).get();
@@ -45,7 +50,7 @@ router.post('/create', createLimit, async (req, res) => {
     const orderId = `NX${uuid().replace(/-/g, '').slice(0, 14).toUpperCase()}`;
     const payRef  = db.collection('payments').doc(orderId);
 
-    const returnUrl = new URL(process.env.HELEKET_RETURN);
+    const returnUrl = new URL(returnBase);
     returnUrl.searchParams.set('order_id', orderId);
     returnUrl.searchParams.set('email', email);
 

@@ -147,7 +147,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
 
 <script src="config.js"></script>
 <script>
-const { BACKEND, esc, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion } = window.NEXAPI;
+const { BACKEND, ORIGIN, esc, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion } = window.NEXAPI;
 
 const P       = new URLSearchParams(location.search);
 const orderId = P.get('order_id');
@@ -219,7 +219,7 @@ document.getElementById('copy-key').addEventListener('click', async e => {
 });
 document.getElementById('copy-url').addEventListener('click', async e => {
   if (!foundKey) return;
-  const url = `${BACKEND}/admin/paid/key?key=${foundKey.sub_key}&num=`;
+  const url = `${ORIGIN}/admin/paid/key?key=${foundKey.sub_key}&num=`;
   if (await copyBtn(url, e.currentTarget)) toast('Call URL copied', 'ok');
 });
 

@@ -20,7 +20,10 @@ const client = axios.create({
 function upstream(n) {
   return {
     slot: `api${n}`,
-    key:  process.env[`REAL_API_KEY_${n}`],
+    // Optional: an upstream you own may not need a key at all
+    key:  process.env[`REAL_API_KEY_${n}`] || '',
+    // The query param the upstream expects the key in (key / apikey / token …)
+    keyParam: process.env[`REAL_API_KEY_PARAM_${n}`] || 'key',
     base: (process.env[`REAL_API_BASE_URL_${n}`] || '').replace(/\/+$/, ''),
     // Override per upstream if the real API uses a different path
     path: process.env[`REAL_API_PATH_${n}`] || '/admin/paid/key'
@@ -41,7 +44,9 @@ function targetsFor(apiTarget) {
 async function callUpstream(up, params) {
   const started = Date.now();
   try {
-    const r = await client.get(`${up.base}${up.path}`, { params: { key: up.key, ...params } });
+    // Only inject a key when one is configured — some upstreams are open
+    const outgoing = up.key ? { [up.keyParam]: up.key, ...params } : { ...params };
+    const r = await client.get(`${up.base}${up.path}`, { params: outgoing });
     return {
       slot: up.slot,
       ok: r.status >= 200 && r.status < 400,
@@ -108,13 +113,14 @@ router.get('/paid/key', validateKey, async (req, res) => {
 
   const targets = targetsFor(keyData.api_target);
 
-  const unconfigured = targets.filter(t => !t.key || !t.base);
+  // Only the base URL is mandatory — the key is optional
+  const unconfigured = targets.filter(t => !t.base);
   if (unconfigured.length) {
     const slots = unconfigured.map(t => t.slot.slice(-1));
     console.error(`[PROXY] not configured: ${unconfigured.map(t => t.slot).join(', ')}`);
     return res.status(500).json({
       success: false,
-      error: `Real API not configured. Set ${slots.map(n => `REAL_API_KEY_${n} and REAL_API_BASE_URL_${n}`).join(', ')} in .env`
+      error: `Real API not configured. Set ${slots.map(n => `REAL_API_BASE_URL_${n}`).join(' and ')} in the environment`
     });
   }
 

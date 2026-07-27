@@ -164,7 +164,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
 
 <script src="config.js"></script>
 <script>
-const { BACKEND, esc, copyBtn, toast, api, fmtNum, fmtDate } = window.NEXAPI;
+const { BACKEND, ORIGIN, esc, copyBtn, toast, api, fmtNum, fmtDate } = window.NEXAPI;
 
 const emailIn = document.getElementById('em-in');
 const errBox  = document.getElementById('err');
@@ -287,7 +287,7 @@ function buildCard(k, i) {
     k.is_lifetime ? { cls: 's-lifetime', txt: 'LIFETIME' } :
                     { cls: 's-active',   txt: 'ACTIVE' };
 
-  const sampleUrl = `${BACKEND}/admin/paid/key?key=${k.sub_key}&num=`;
+  const sampleUrl = `${ORIGIN}/admin/paid/key?key=${k.sub_key}&num=`;
 
   return `
   <article class="key-card" style="--plan-grad:linear-gradient(135deg,${color},${color}55);animation-delay:${i * .08}s">
@@ -370,10 +370,10 @@ function startCountdown(expiresAt, i) {
 let activeKey = null, activeTab = 'curl';
 
 const sample = (tab, key) => ({
-  curl: `<span class="cm"># Replace the number with your own input</span>\ncurl "<span class="c1">${esc(BACKEND)}/admin/paid/key</span><span class="c3">?key=${esc(key)}&amp;num=919876543210</span>"`,
-  python: `<span class="c4">import</span> requests\n\nres = requests.get(\n    <span class="c2">"${esc(BACKEND)}/admin/paid/key"</span>,\n    params={<span class="c2">"key"</span>: <span class="c2">"${esc(key)}"</span>, <span class="c2">"num"</span>: <span class="c2">"919876543210"</span>}\n)\n<span class="c4">print</span>(res.json())`,
-  js: `<span class="c4">const</span> res = <span class="c4">await</span> fetch(\n  <span class="c2">"${esc(BACKEND)}/admin/paid/key?key=${esc(key)}&amp;num=919876543210"</span>\n);\n<span class="c4">const</span> data = <span class="c4">await</span> res.json();\nconsole.log(data);`,
-  php: `<span class="c3">&lt;?php</span>\n<span class="c4">$url</span>  = <span class="c2">"${esc(BACKEND)}/admin/paid/key"</span>\n      . <span class="c2">"?key=${esc(key)}&amp;num=919876543210"</span>;\n<span class="c4">$resp</span> = json_decode(file_get_contents(<span class="c4">$url</span>), <span class="c4">true</span>);\nvar_dump(<span class="c4">$resp</span>);`
+  curl: `<span class="cm"># Replace the number with your own input</span>\ncurl "<span class="c1">${esc(ORIGIN)}/admin/paid/key</span><span class="c3">?key=${esc(key)}&amp;num=919876543210</span>"`,
+  python: `<span class="c4">import</span> requests\n\nres = requests.get(\n    <span class="c2">"${esc(ORIGIN)}/admin/paid/key"</span>,\n    params={<span class="c2">"key"</span>: <span class="c2">"${esc(key)}"</span>, <span class="c2">"num"</span>: <span class="c2">"919876543210"</span>}\n)\n<span class="c4">print</span>(res.json())`,
+  js: `<span class="c4">const</span> res = <span class="c4">await</span> fetch(\n  <span class="c2">"${esc(ORIGIN)}/admin/paid/key?key=${esc(key)}&amp;num=919876543210"</span>\n);\n<span class="c4">const</span> data = <span class="c4">await</span> res.json();\nconsole.log(data);`,
+  php: `<span class="c3">&lt;?php</span>\n<span class="c4">$url</span>  = <span class="c2">"${esc(ORIGIN)}/admin/paid/key"</span>\n      . <span class="c2">"?key=${esc(key)}&amp;num=919876543210"</span>;\n<span class="c4">$resp</span> = json_decode(file_get_contents(<span class="c4">$url</span>), <span class="c4">true</span>);\nvar_dump(<span class="c4">$resp</span>);`
 }[tab]);
 
 function renderCode() {

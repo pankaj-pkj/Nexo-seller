@@ -198,7 +198,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 40px;display:fl
 
 <script src="config.js"></script>
 <script>
-const { BACKEND, esc, toast, fmtNum, fmtDate } = window.NEXAPI;
+const { BACKEND, ORIGIN, esc, toast, fmtNum, fmtDate } = window.NEXAPI;
 
 let TOKEN    = sessionStorage.getItem('admin_token') || '';
 let allKeys  = [];
@@ -233,7 +233,7 @@ async function login() {
       loginEr.textContent = d.error || 'Incorrect password.';
     }
   } catch {
-    loginEr.textContent = `Cannot reach ${BACKEND}. Is the backend awake?`;
+    loginEr.textContent = `Cannot reach ${ORIGIN}. Is the backend awake?`;
   }
   btn.textContent = 'Enter Dashboard';
   btn.disabled = false;
