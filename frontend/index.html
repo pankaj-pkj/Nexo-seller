@@ -529,12 +529,17 @@ async function loadPlans() {
   } catch (err) {
     grid.setAttribute('aria-busy', 'false');
 
-    // Firestore answers a missing composite index with a create-it URL inside
-    // the error text. Link it so it's one tap away instead of a wall of text.
-    const link = (err.message.match(/https?:\/\/\S+/) || [])[0];
-    const body = link
-      ? esc(err.message.replace(link, '')) +
-        `<br><br><a class="retry-btn" href="${esc(link)}" target="_blank" rel="noopener">Create the Firestore index →</a>`
+    // Firestore answers a missing composite index with a create-it URL inside the
+    // error text. Only offer that button when the error really is about an index:
+    // matching any URL also caught our own "is <origin> awake?" message and
+    // mislabelled a dead backend as an index problem.
+    const indexLink = /\bindex\b/i.test(err.message)
+      ? (err.message.match(/https?:\/\/console\.firebase\.google\.com\S+/) || [])[0]
+      : null;
+
+    const body = indexLink
+      ? esc(err.message.replace(indexLink, '')) +
+        `<br><br><a class="retry-btn" href="${esc(indexLink)}" target="_blank" rel="noopener">Create the Firestore index →</a>`
       : esc(err.message);
 
     grid.innerHTML = `

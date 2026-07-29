@@ -37,6 +37,28 @@ Create these three free accounts:
 
 You also need your repo on GitHub. If you are reading this from the repo, that's done.
 
+### ⚠️ The host has to run Node.js
+
+This is a Node/Express app that talks to Firestore through `firebase-admin`.
+Pick a host that actually runs Node:
+
+| Host | Works? | Why |
+|---|---|---|
+| **Vercel** | ✅ | Node serverless functions — what this guide uses |
+| **Render** | ✅ | Long-lived Node process — see the last section |
+| **Railway / Fly.io** | ✅ | Also plain Node |
+| **Cloudflare Pages / Workers** | ❌ | Not Node. It's the `workerd` runtime, and `firebase-admin` needs Node APIs and gRPC, which Workers doesn't have |
+| **GitHub Pages / Netlify (static)** | ❌ | Static files only, no server |
+
+**A static-only host will look like it worked.** The landing page renders,
+because those are just HTML files — but every API call 404s and no plans load.
+If that's what you're seeing, the host never started the backend.
+
+**Already using Cloudflare for your domain?** Keep it. Deploy the app to Vercel,
+then in Cloudflare DNS add a `CNAME` for your subdomain pointing at Vercel, and
+add that domain under Vercel → Settings → Domains. You keep Cloudflare DNS, and
+Vercel runs the app.
+
 ---
 
 # Step 1 — Firebase
@@ -335,9 +357,23 @@ You don't have to do anything for these.
 
 # Troubleshooting
 
+### "No API at … — the backend is not running on this host"
+
+The pages deployed but the server didn't. Either the host doesn't run Node at all
+(Cloudflare Pages, Netlify static, GitHub Pages — see the table near the top), or
+the Output/Root directory was set to `frontend`, so only the static folder shipped.
+
+On Vercel: **Settings → General → Root Directory** must be empty (the repository
+root), Framework Preset **Other**, Build Command and Output Directory both empty.
+Then redeploy.
+
+Quick check: open `<YOUR-URL>/health`. JSON means the backend is running; a 404 or
+an HTML page means it isn't.
+
 ### "Could not load plans" on the home page
 
-Firebase credentials aren't right. Vercel → your project → **Logs**.
+If the message mentions Firebase, the credentials aren't right. Vercel → your
+project → **Logs**.
 
 - `FIREBASE_SERVICE_ACCOUNT is not valid JSON` → the paste got cut off. Copy the
   file again; make sure it starts with `{` and ends with `}`.

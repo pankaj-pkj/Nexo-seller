@@ -87,8 +87,19 @@ const BACKEND_URL = '';
   async function api(path, opts = {}) {
     const res = await fetch(`${BACKEND}${path}`, opts);
     let body;
-    try { body = await res.json(); }
-    catch { throw new Error(`Backend returned ${res.status} (not JSON) — is ${ORIGIN} awake?`); }
+    try {
+      body = await res.json();
+    } catch {
+      // A 404 with a non-JSON body almost always means these pages are being
+      // served as plain static files by a host that never started the backend.
+      // Say that outright — "not JSON" alone sends people hunting the wrong bug.
+      if (res.status === 404)
+        throw new Error(
+          `No API at ${ORIGIN}${path}. The pages are being served, but the backend ` +
+          `is not running on this host — check that it deploys the Node app, not just the frontend folder.`
+        );
+      throw new Error(`Backend returned ${res.status} (not JSON) — is ${ORIGIN} awake?`);
+    }
     if (!res.ok && body?.error) throw new Error(body.error);
     return body;
   }
