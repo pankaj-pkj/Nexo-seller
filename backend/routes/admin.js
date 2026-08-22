@@ -230,13 +230,23 @@ router.get('/diagnostics', adminAuth, async (req, res) => {
     const code = firestoreError.code;
     const msg  = String(firestoreError.message || '');
 
-    if (code === 7 || /PERMISSION_DENIED/i.test(msg)) {
-      diagnosis = `Firestore refused this service account for project "${identity.projectId}".`;
+    if (/has not been used in project|is disabled/i.test(msg)) {
+      // Google is explicit about this one, so handle it before the generic case
+      diagnosis = `The Cloud Firestore API is not enabled for project "${identity.projectId}".`;
       fixes = [
-        `Confirm the Firebase console is showing project "${identity.projectId}" — if the URL says a different project, the pasted JSON belongs to another (or deleted) project. Generate a fresh key from the right project.`,
-        `Enable the Cloud Firestore API: https://console.cloud.google.com/apis/library/firestore.googleapis.com?project=${identity.projectId}`,
-        `Give the service account Firestore access: https://console.cloud.google.com/iam-admin/iam?project=${identity.projectId} — find ${identity.clientEmail} and grant it the "Cloud Datastore User" role.`,
-        'Security Rules are NOT the cause — the Admin SDK bypasses them.'
+        `Enable it here, then wait a minute and retry: https://console.cloud.google.com/apis/library/firestore.googleapis.com?project=${identity.projectId}`
+      ];
+    } else if (code === 7 || /PERMISSION_DENIED/i.test(msg)) {
+      // Code 7 means the key authenticated fine but the identity lacks rights.
+      // A wrong project would fail earlier as UNAUTHENTICATED or NOT_FOUND, so
+      // the IAM role is the overwhelmingly likely cause — lead with it.
+      diagnosis = `The key for project "${identity.projectId}" is valid, but this service account has no permission to use Firestore.`;
+      fixes = [
+        `Grant the role: open https://console.cloud.google.com/iam-admin/iam?project=${identity.projectId} → click "Grant access" → paste ${identity.clientEmail} as the principal → choose the role "Cloud Datastore User" → Save. Wait ~1 minute, then retry.`,
+        `If that account is not listed on the IAM page at all, its role was removed. Adding it back with "Cloud Datastore User" fixes it.`,
+        `Also confirm the Firestore API is on: https://console.cloud.google.com/apis/library/firestore.googleapis.com?project=${identity.projectId}`,
+        'Security Rules are NOT the cause — the Admin SDK bypasses them, so allow/deny in Rules makes no difference here.',
+        'Quickest escape hatch: create a brand-new Firebase project, enable Firestore, generate a fresh service-account key, and replace FIREBASE_SERVICE_ACCOUNT. New projects get the correct IAM automatically.'
       ];
     } else if (code === 5 || /NOT_FOUND/i.test(msg)) {
       diagnosis = `No Firestore database found in project "${identity.projectId}".`;
