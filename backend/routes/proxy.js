@@ -172,10 +172,29 @@ router.get('/paid/key', validateKey, async (req, res) => {
     if (!r.ok && r.error) {
       return res.status(r.status).json({
         success: false,
+        gateway: 'NexAPI',
         error:   r.status === 504 ? 'Upstream timeout' : 'Gateway error',
         message: r.error
       });
     }
+
+    // A 404 from the upstream is nearly always a wrong REAL_API_PATH, and the
+    // raw body is an HTML error page that breaks any client calling .json().
+    // Name the misconfiguration instead of forwarding the page. The upstream
+    // URL is deliberately left out — hiding it is the point of the gateway —
+    // so the full target goes to the server log only.
+    if (r.status === 404) {
+      const target = targets[0];
+      console.error(`[PROXY] upstream 404 for ${target.slot}: ${target.base}${target.path}`);
+      return res.status(502).json({
+        success: false,
+        gateway: 'NexAPI',
+        error:   'Upstream endpoint not found',
+        message: `The upstream API answered 404. The configured path for ${target.slot} does not exist on it.`,
+        fix:     `Check REAL_API_PATH_${target.slot.slice(-1)} — open the upstream in a browser to confirm the real path, then update the env var and redeploy.`
+      });
+    }
+
     const ctype = r.headers?.['content-type'];
     if (ctype) res.type(ctype);
     return res.status(r.status).send(r.data);
