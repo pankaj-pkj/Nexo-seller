@@ -328,7 +328,7 @@ it:
 1. While the customer waits on the payment page, that page asks Heleket about
    their order directly every 5 seconds — and the key is created the moment
    Heleket says paid.
-2. An hourly scheduled job sweeps up anything still pending.
+2. A daily scheduled job sweeps up anything still pending (Vercel Hobby limits cron to once/day; the live check below is what actually matters).
 
 So the webhook only makes keys arrive a few seconds sooner. **No customer's
 payment can get lost without it.**
@@ -405,8 +405,8 @@ Check `X-Sources-Failed` in the response headers to see which one broke.
 
 ### A customer paid but got no key
 
-1. Open `<YOUR-URL>/dashboard.html` and look up their email — the hourly sweep
-   has probably already issued it
+1. Open `<YOUR-URL>/dashboard.html` and look up their email — the live check while they
+   were on the payment page, or the daily sweep, has probably already issued it
 2. If not, check `HELEKET_API_KEY` is correct in Vercel
 3. As a stopgap, issue the key by hand from the admin panel
 

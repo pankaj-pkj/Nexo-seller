@@ -14,7 +14,7 @@
 
   "crons": [
     { "path": "/api/cron/expire",        "schedule": "0 0 * * *" },
-    { "path": "/api/cron/sync-payments", "schedule": "0 * * * *" }
+    { "path": "/api/cron/sync-payments", "schedule": "30 0 * * *" }
   ],
 
   "headers": [

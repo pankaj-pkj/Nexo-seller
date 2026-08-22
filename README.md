@@ -292,7 +292,7 @@ order the webhook cannot find.
 | Task | On Vercel | On Render |
 |------|-----------|-----------|
 | Expire keys past `expires_at` | `/api/cron/expire`, daily (Vercel Cron) | in-process cron, daily |
-| Recover payments the webhook missed | `/api/cron/sync-payments`, hourly | in-process poller, every 2 min |
+| Recover payments the webhook missed | `/api/cron/sync-payments`, daily (Hobby-tier cron cap) | in-process poller, every 2 min |
 | Keep the free tier awake | not needed | `/health` self-ping every 14 min |
 
 None of this gates access. **Expiry and request limits are enforced on every single
