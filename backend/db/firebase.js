@@ -56,13 +56,29 @@ function loadCredentials() {
   };
 }
 
+let credentials = null;
+
 if (!admin.apps.length) {
-  const creds = loadCredentials();
-  admin.initializeApp({ credential: admin.credential.cert(creds) });
-  console.log(`[FIREBASE] Connected to project ${creds.projectId}`);
+  credentials = loadCredentials();
+  admin.initializeApp({ credential: admin.credential.cert(credentials) });
+  console.log(`[FIREBASE] Initialised for project ${credentials.projectId}`);
 }
 
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true });
 
-module.exports = { admin, db };
+/**
+ * Which project and identity we are actually talking to.
+ *
+ * Worth exposing because the two failures people hit here — a service-account
+ * JSON from a different (or deleted) project, and an identity without Firestore
+ * access — both surface as an opaque PERMISSION_DENIED. Being able to read back
+ * the project id turns that into a one-glance diagnosis.
+ */
+const identity = {
+  projectId:   credentials?.projectId   || null,
+  clientEmail: credentials?.clientEmail || null,
+  source:      process.env.FIREBASE_SERVICE_ACCOUNT ? 'FIREBASE_SERVICE_ACCOUNT' : 'FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY'
+};
+
+module.exports = { admin, db, identity };

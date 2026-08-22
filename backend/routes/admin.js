@@ -1,7 +1,7 @@
 const express      = require('express');
 const router       = express.Router();
 const crypto       = require('crypto');
-const { db }       = require('../db/firebase');
+const { db, identity } = require('../db/firebase');
 const rateLimit    = require('../middleware/rateLimit');
 
 /** Constant-time string compare — no early exit to time-probe the secret against. */
@@ -183,6 +183,87 @@ async function setKeyActive(req, res, isActive) {
 
 router.post('/keys/:id/deactivate', adminAuth, (req, res) => setKeyActive(req, res, false));
 router.post('/keys/:id/activate',   adminAuth, (req, res) => setKeyActive(req, res, true));
+
+// GET /api/admin/diagnostics — why can't we reach Firestore?
+//
+// A Firestore failure arrives as a bare code (PERMISSION_DENIED, NOT_FOUND)
+// with no hint about which project the credentials point at or what to fix.
+// This does one real read and one real write, then maps the code to the thing
+// that actually needs changing.
+router.get('/diagnostics', adminAuth, async (req, res) => {
+  const checks = [];
+  const record = (name, ok, detail) => checks.push({ name, ok, detail });
+
+  record('credentials_loaded', Boolean(identity.projectId),
+    identity.projectId ? `project: ${identity.projectId}` : 'no credentials resolved');
+  record('credentials_source', true, identity.source);
+  record('service_account', Boolean(identity.clientEmail),
+    identity.clientEmail || 'missing client_email');
+
+  let firestoreError = null;
+
+  try {
+    await db.collection('plans').limit(1).get();
+    record('firestore_read', true, 'read succeeded');
+  } catch (err) {
+    firestoreError = err;
+    record('firestore_read', false, `${err.code ?? '?'} ${err.message}`);
+  }
+
+  if (!firestoreError) {
+    try {
+      const ref = db.collection('_diagnostics').doc('probe');
+      await ref.set({ at: new Date() });
+      await ref.delete();
+      record('firestore_write', true, 'write + delete succeeded');
+    } catch (err) {
+      firestoreError = err;
+      record('firestore_write', false, `${err.code ?? '?'} ${err.message}`);
+    }
+  }
+
+  // gRPC status codes: 7 = PERMISSION_DENIED, 5 = NOT_FOUND, 16 = UNAUTHENTICATED
+  let diagnosis = null;
+  let fixes = [];
+
+  if (firestoreError) {
+    const code = firestoreError.code;
+    const msg  = String(firestoreError.message || '');
+
+    if (code === 7 || /PERMISSION_DENIED/i.test(msg)) {
+      diagnosis = `Firestore refused this service account for project "${identity.projectId}".`;
+      fixes = [
+        `Confirm the Firebase console is showing project "${identity.projectId}" — if the URL says a different project, the pasted JSON belongs to another (or deleted) project. Generate a fresh key from the right project.`,
+        `Enable the Cloud Firestore API: https://console.cloud.google.com/apis/library/firestore.googleapis.com?project=${identity.projectId}`,
+        `Give the service account Firestore access: https://console.cloud.google.com/iam-admin/iam?project=${identity.projectId} — find ${identity.clientEmail} and grant it the "Cloud Datastore User" role.`,
+        'Security Rules are NOT the cause — the Admin SDK bypasses them.'
+      ];
+    } else if (code === 5 || /NOT_FOUND/i.test(msg)) {
+      diagnosis = `No Firestore database found in project "${identity.projectId}".`;
+      fixes = [
+        'Firebase console → Build → Firestore Database → Create database.',
+        'It must be the "(default)" database; a named database is not used here.'
+      ];
+    } else if (code === 16 || /UNAUTHENTICATED/i.test(msg)) {
+      diagnosis = 'The private key was rejected.';
+      fixes = [
+        'The pasted JSON is truncated or its private_key newlines were mangled. Re-copy the whole file and paste it again.'
+      ];
+    } else {
+      diagnosis = 'Firestore returned an error we do not have a specific hint for.';
+      fixes = ['See the raw detail on the failing check above.'];
+    }
+  }
+
+  res.json({
+    success: !firestoreError,
+    project: identity.projectId,
+    service_account: identity.clientEmail,
+    checks,
+    diagnosis,
+    fixes
+  });
+});
 
 // POST /api/admin/seed — writes the 4 default plans to Firestore.
 // Exists so the project can be set up from a phone, without a terminal to run

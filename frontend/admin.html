@@ -62,6 +62,21 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 40px;display:fl
 .setup-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 30px rgba(245,158,11,.28)}
 .setup-btn:disabled{opacity:.55;transform:none}
 .setup-msg{font-size:.82rem;margin-top:12px;min-height:1.2em}
+.setup-actions{display:flex;gap:10px;flex-wrap:wrap}
+.diag-btn{background:rgba(99,102,241,.12);border:1px solid var(--b2);color:var(--indigo);padding:11px 20px;border-radius:9px;font-size:.85rem;font-weight:600;transition:all .3s}
+.diag-btn:hover:not(:disabled){background:rgba(99,102,241,.22)}
+.diag-btn:disabled{opacity:.55}
+.diag-out{display:none;margin-top:16px;background:rgba(0,0,0,.35);border:1px solid var(--b1);border-radius:12px;padding:16px;font-size:.8rem;line-height:1.7}
+.diag-out.show{display:block}
+.diag-row{display:flex;gap:9px;align-items:flex-start;margin-bottom:7px;font-family:'JetBrains Mono',monospace;font-size:.75rem}
+.diag-row .ok{color:var(--green)}
+.diag-row .bad{color:var(--red)}
+.diag-name{color:var(--dim);min-width:150px}
+.diag-detail{color:var(--muted);word-break:break-word;flex:1}
+.diag-verdict{margin-top:14px;padding-top:14px;border-top:1px solid var(--b1);color:var(--gold);font-weight:600}
+.diag-fixes{margin:10px 0 0;padding-left:20px;color:var(--dim)}
+.diag-fixes li{margin-bottom:8px}
+.diag-fixes a{color:var(--indigo);word-break:break-all}
 
 /* Modal + form (plan editor) */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);z-index:1000;
@@ -199,8 +214,12 @@ select.issue-in option{background:#0a0f20;color:var(--txt)}
     <div class="setup-box" id="setup-box">
       <div class="setup-h">🌱 One-time setup</div>
       <p class="setup-p">No plans found in Firestore yet. Click below to create the 4 default plans (Daily, Weekly, Monthly, Lifetime) — same thing <code>npm run seed</code> does, but no terminal needed.</p>
-      <button class="setup-btn" id="seed-btn">Seed default plans</button>
+      <div class="setup-actions">
+        <button class="setup-btn" id="seed-btn">Seed default plans</button>
+        <button class="diag-btn" id="diag-btn">Diagnose connection</button>
+      </div>
       <div class="setup-msg" id="seed-msg"></div>
+      <div class="diag-out" id="diag-out"></div>
     </div>
 
     <div class="breakdown" id="breakdown-box">
@@ -435,13 +454,6 @@ async function checkPlans() {
       sel.innerHTML = '<option>— seed plans first —</option>';
       sel.disabled = true;
     }
-    // A missing composite index also lands here — say so instead of silently
-    // showing a seed button that won't fix it.
-    if (!d.success && /index/i.test(d.error || '')) {
-      document.getElementById('seed-msg').innerHTML =
-        `⚠ Firestore also needs an index for this query. Open the link in your Render logs to create it.`;
-      document.getElementById('seed-msg').style.color = 'var(--gold)';
-    }
   } catch {
     box.classList.remove('show');
   }
@@ -460,11 +472,46 @@ document.getElementById('seed-btn').addEventListener('click', async e => {
     toast(d.message, 'ok');
     setTimeout(() => loadAll(true), 900);
   } catch (err) {
-    msg.textContent = '✕ ' + err.message;
+    msg.innerHTML = `✕ ${esc(err.message)}<br><span style="color:var(--dim)">Hit <strong>Diagnose connection</strong> to see exactly what Firestore is rejecting.</span>`;
     msg.style.color = 'var(--red)';
   }
   btn.disabled = false;
   btn.textContent = 'Seed default plans';
+});
+
+// Runs a real read and a real write against Firestore and reports what broke.
+document.getElementById('diag-btn').addEventListener('click', async e => {
+  const btn = e.currentTarget, out = document.getElementById('diag-out');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  out.classList.add('show');
+  out.innerHTML = '<span class="spin"></span> Testing Firestore…';
+
+  try {
+    const d = await api('/api/admin/diagnostics');
+
+    const rows = (d.checks || []).map(c => `
+      <div class="diag-row">
+        <span class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✕'}</span>
+        <span class="diag-name">${esc(c.name)}</span>
+        <span class="diag-detail">${esc(c.detail || '')}</span>
+      </div>`).join('');
+
+    // Turn any URL in a fix into a tappable link — these are console deep links
+    const linkify = t => esc(t).replace(/(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank" rel="noopener">$1</a>');
+
+    const verdict = d.success
+      ? '<div class="diag-verdict" style="color:var(--green)">✓ Firestore is reachable and writable. Seeding should work now.</div>'
+      : `<div class="diag-verdict">${esc(d.diagnosis || 'Something is wrong.')}</div>
+         <ol class="diag-fixes">${(d.fixes || []).map(f => `<li>${linkify(f)}</li>`).join('')}</ol>`;
+
+    out.innerHTML = rows + verdict;
+  } catch (err) {
+    out.innerHTML = `<span style="color:var(--red)">✕ ${esc(err.message)}</span>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Diagnose connection';
 });
 
 async function loadStats(fresh) {
