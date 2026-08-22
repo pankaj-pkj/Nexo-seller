@@ -209,7 +209,9 @@ h1.page-h{font-size:2.2rem;font-weight:800;letter-spacing:-1px;margin-bottom:8px
         <tbody>
           <tr><td class="status-code s200">200</td><td>—</td><td>Success. The upstream response is returned as-is.</td></tr>
           <tr><td class="status-code s401">401</td><td>API key required</td><td>No <code>key</code> parameter was provided.</td></tr>
-          <tr><td class="status-code s401">401</td><td>Invalid API key</td><td>Key not found, malformed, or deactivated.</td></tr>
+          <tr><td class="status-code s401">401</td><td>Malformed API key</td><td>Wrong shape. A key is <code>NK-</code> plus three 8-character hex groups. Rejected before the upstream is called.</td></tr>
+          <tr><td class="status-code s401">401</td><td>Unknown API key</td><td>Correctly formed, but not issued by this gateway.</td></tr>
+          <tr><td class="status-code s401">401</td><td>API key is inactive</td><td>Deactivated in the admin panel.</td></tr>
           <tr><td class="status-code s401">401</td><td>API key expired</td><td>Key is past its expiry date. Buy a new plan.</td></tr>
           <tr><td class="status-code s429">429</td><td>Request limit reached</td><td>You used every request in your plan.</td></tr>
           <tr><td class="status-code s502">502</td><td>Gateway error</td><td>The upstream API could not be reached.</td></tr>
@@ -217,6 +219,7 @@ h1.page-h{font-size:2.2rem;font-weight:800;letter-spacing:-1px;margin-bottom:8px
         </tbody>
       </table></div>
       <p>Failed upstream calls (502 / 504) do <strong>not</strong> count against your quota.</p>
+      <p>Every error raised by this gateway carries <code>"gateway": "NexAPI"</code>. If a response does not have it, it came from the upstream API and was passed through untouched.</p>
     </section>
 
     <section class="doc-section" id="headers">

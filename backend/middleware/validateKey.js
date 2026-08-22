@@ -16,17 +16,23 @@ async function validateKey(req, res, next) {
   if (!key) {
     return res.status(401).json({
       success: false,
+      gateway: 'NexAPI',
       error: 'API key required',
-      hint: 'Add ?key=YOUR_KEY to your request'
+      hint: 'Add ?key=YOUR_KEY to the request, or send it as an X-API-Key header.'
     });
   }
 
-  // Cheap shape check first — a malformed key never costs a Firestore read
+  // Cheap shape check first — a malformed key never costs a Firestore read.
+  // The example below is deliberately real hex: an XXXX-style placeholder gets
+  // pasted verbatim and then fails this very check, which reads as the upstream
+  // API rejecting the caller rather than the gateway never forwarding at all.
   if (!KEY_RE.test(key)) {
     return res.status(401).json({
       success: false,
-      error: 'Invalid API key',
-      hint: 'Keys look like NK-XXXXXXXX-XXXXXXXX-XXXXXXXX'
+      gateway: 'NexAPI',
+      error: 'Malformed API key — rejected by the NexAPI gateway, the request never reached the upstream API',
+      hint: 'A key is NK- followed by three 8-character hex groups, e.g. NK-4F2A8C1D-9E7B3A2F-D6C5E4B1. Copy yours from the dashboard; do not use a placeholder.',
+      received: key.length > 60 ? `${key.slice(0, 60)}… (${key.length} chars)` : key
     });
   }
 
@@ -40,14 +46,24 @@ async function validateKey(req, res, next) {
       .get();
 
     if (snap.empty) {
-      return res.status(401).json({ success: false, error: 'Invalid API key' });
+      return res.status(401).json({
+        success: false,
+        gateway: 'NexAPI',
+        error: 'Unknown API key',
+        hint: 'The key is correctly formed but is not in this gateway. Check you copied it in full, and that it belongs to this deployment.'
+      });
     }
 
     const keyDoc  = snap.docs[0];
     const keyData = keyDoc.data();
 
     if (!keyData.is_active) {
-      return res.status(401).json({ success: false, error: 'API key is inactive' });
+      return res.status(401).json({
+        success: false,
+        gateway: 'NexAPI',
+        error: 'API key is inactive',
+        hint: 'This key was deactivated in the admin panel, or it expired. Reactivate it there or buy a new plan.'
+      });
     }
 
     // Expiry check (null expires_at = Lifetime plan)
