@@ -236,6 +236,32 @@ A plan's `api_target` decides where its keys route:
 
 Set `DEFAULT_API_TARGET=both` and re-seed with force to switch every plan over.
 
+### When the upstream is not a plain GET
+
+| Variable | Purpose |
+|---|---|
+| `REAL_API_METHOD_x` | `GET` (default) or `POST` |
+| `REAL_API_BODY_x` | POST only. JSON body template; `{placeholders}` are filled from the caller's query params |
+| `UPSTREAM_SEQUENTIAL` | Run API 1 to completion before API 2, instead of in parallel |
+
+So an upstream that wants `POST {"phone": "..."}` while customers send `?num=…`:
+
+```
+REAL_API_METHOD_1=POST
+REAL_API_BODY_1={"phone":"{num}"}
+```
+
+The template is walked after parsing, not string-spliced into raw JSON, so a
+value containing a quote cannot corrupt the body. A template with no placeholder
+(`{"level":5}`) sends a fixed body, which is how you drive an upstream that takes
+no caller input.
+
+`UPSTREAM_SEQUENTIAL` matters when one upstream primes state the other depends on
+— a mode or speed setting that must land before the call that acts on it.
+Execution order follows the slot numbers, so put the one that must run first in
+slot 1. On a field-name collision the later slot wins the merge, which is the
+second reason to give slot 2 to the upstream whose answer you actually want.
+
 A combined response looks like this:
 
 ```json

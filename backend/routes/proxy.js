@@ -26,8 +26,31 @@ function upstream(n) {
     keyParam: process.env[`REAL_API_KEY_PARAM_${n}`] || 'key',
     base: (process.env[`REAL_API_BASE_URL_${n}`] || '').replace(/\/+$/, ''),
     // Override per upstream if the real API uses a different path
-    path: process.env[`REAL_API_PATH_${n}`] || '/admin/paid/key'
+    path: process.env[`REAL_API_PATH_${n}`] || '/admin/paid/key',
+    // GET (query string) or POST (JSON body)
+    method: (process.env[`REAL_API_METHOD_${n}`] || 'GET').toUpperCase(),
+    // POST only. A JSON template whose {placeholders} are filled from the
+    // caller's query params, so an upstream wanting {"phone": "..."} can be fed
+    // from a customer sending ?num=… without either side having to change.
+    bodyTemplate: process.env[`REAL_API_BODY_${n}`] || ''
   };
+}
+
+/**
+ * Fills a body template from the caller's params.
+ *
+ * Walks the parsed template rather than string-replacing the raw JSON, so a
+ * value containing a quote or a backslash cannot break out and corrupt the
+ * document. `{num}` alone is replaced wholesale; `91{num}` interpolates.
+ */
+function buildBody(template, params) {
+  const fill = v => {
+    if (typeof v === 'string') return v.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? '');
+    if (Array.isArray(v)) return v.map(fill);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, val]) => [k, fill(val)]));
+    return v;
+  };
+  return fill(template);
 }
 
 /**
@@ -46,7 +69,24 @@ async function callUpstream(up, params) {
   try {
     // Only inject a key when one is configured — some upstreams are open
     const outgoing = up.key ? { [up.keyParam]: up.key, ...params } : { ...params };
-    const r = await client.get(`${up.base}${up.path}`, { params: outgoing });
+    const url = `${up.base}${up.path}`;
+
+    let r;
+    if (up.method === 'POST') {
+      // Without a template the caller's params become the body as-is; with one,
+      // the template decides the field names the upstream actually expects.
+      let body = outgoing;
+      if (up.bodyTemplate) {
+        try {
+          body = buildBody(JSON.parse(up.bodyTemplate), outgoing);
+        } catch (e) {
+          throw new Error(`REAL_API_BODY_${up.slot.slice(-1)} is not valid JSON: ${e.message}`);
+        }
+      }
+      r = await client.post(url, body, { headers: { 'Content-Type': 'application/json' } });
+    } else {
+      r = await client.get(url, { params: outgoing });
+    }
     return {
       slot: up.slot,
       ok: r.status >= 200 && r.status < 400,
@@ -125,8 +165,22 @@ router.get('/paid/key', validateKey, async (req, res) => {
   }
 
   const started = Date.now();
-  const results = await Promise.all(targets.map(t => callUpstream(t, fwdParams)));
-  const anyOk   = results.some(r => r.ok);
+
+  // Parallel by default — two independent lookups should not wait on each other.
+  // Sequential when the upstreams are ordered: one that primes state (a speed or
+  // mode setting) has to land before the one that acts on it, which running them
+  // together would race.
+  const sequential = /^(1|true|yes|sequential)$/i.test(process.env.UPSTREAM_SEQUENTIAL || '');
+
+  let results;
+  if (sequential && targets.length > 1) {
+    results = [];
+    for (const t of targets) results.push(await callUpstream(t, fwdParams));
+  } else {
+    results = await Promise.all(targets.map(t => callUpstream(t, fwdParams)));
+  }
+
+  const anyOk = results.some(r => r.ok);
 
   // A call only burns quota if at least one upstream actually answered.
   if (anyOk) {
