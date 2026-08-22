@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NexAPI — Terms and Conditions</title>
+<meta name="description" content="The rules for using NexAPI: what a plan buys you, key expiry, acceptable use, payment and refund terms, and limits of liability.">
+<meta name="theme-color" content="#04060D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+.ab{animation:none}
+.ab1{width:50vw;height:50vw;background:radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%);top:-15vw;left:-5vw}
+.ab2{width:35vw;height:35vw;background:radial-gradient(circle,rgba(99,102,241,.08) 0%,transparent 70%);bottom:10vh;right:5vw}
+body>nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(4,6,13,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--b1)}
+body>nav .nav-r{display:flex;align-items:center;gap:10px}
+body>nav .nav-r a{color:var(--dim);font-size:.85rem;text-decoration:none;transition:all .2s;padding:8px 14px;border:1px solid var(--b1);border-radius:8px;white-space:nowrap}
+body>nav .nav-r a:hover{color:var(--txt);border-color:var(--b2)}
+@media(max-width:560px){body>nav{padding:12px 16px}body>nav .nav-r a{padding:7px 11px;font-size:.8rem}}
+</style>
+</head>
+<body>
+
+<a href="#content" class="skip-link">Skip to content</a>
+<div class="aurora" aria-hidden="true"><div class="ab ab1"></div><div class="ab ab2"></div></div>
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<nav>
+  <a href="index.html" class="logo" aria-label="NexAPI home"><div class="logo-mark" aria-hidden="true">N</div><span class="logo-text">NexAPI</span></a>
+  <div class="nav-r">
+    <a href="privacy.html">Privacy</a>
+    <a href="index.html">← Home</a>
+  </div>
+</nav>
+
+<main class="legal-wrap" id="content">
+  <div class="legal-eye">// Legal</div>
+  <h1>Terms and Conditions</h1>
+  <div class="legal-updated">Last updated: 22 August 2026</div>
+  <p class="legal-intro">
+    These terms cover your use of NexAPI ("we", "us", "the gateway"). Buying a
+    plan or calling the API means you accept them. If you do not, do not use the
+    service. Please read section 5 (payments), section 6 (expiry) and section 9
+    (liability) properly — those are the ones that catch people out.
+  </p>
+
+  <nav class="legal-toc" aria-label="On this page">
+    <div class="legal-toc-h">On this page</div>
+    <ol>
+      <li><a href="#service">What the service is</a></li>
+      <li><a href="#eligibility">Who may use it</a></li>
+      <li><a href="#keys">Your API key</a></li>
+      <li><a href="#use">Acceptable use</a></li>
+      <li><a href="#payments">Payments and refunds</a></li>
+      <li><a href="#expiry">Plan duration and expiry</a></li>
+      <li><a href="#limits">Request limits and fair use</a></li>
+      <li><a href="#availability">Availability and the upstream API</a></li>
+      <li><a href="#liability">Liability</a></li>
+      <li><a href="#suspension">Suspension and termination</a></li>
+      <li><a href="#changes">Changes to plans and terms</a></li>
+      <li><a href="#law">General</a></li>
+    </ol>
+  </nav>
+
+  <section class="legal-sec" id="service">
+    <h2>1. What the service is</h2>
+    <p>
+      NexAPI is a <strong>reseller gateway</strong>. We hold access to one or
+      more third-party APIs and sell you a key that lets you call them through
+      us. When your key hits the gateway, we check it, forward the request
+      upstream with our own credentials, and hand you back the answer.
+    </p>
+    <p>
+      We are a middle layer, not the origin of the data. The underlying API is
+      operated by someone else. Some plans call more than one upstream and merge
+      the responses into a single reply.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="eligibility">
+    <h2>2. Who may use it</h2>
+    <p>
+      You must be 18 or older, or old enough to enter a binding contract where
+      you live, and legally allowed to buy the service and to hold and spend
+      cryptocurrency in your country. You are responsible for knowing whether
+      that is true where you are.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="keys">
+    <h2>3. Your API key</h2>
+    <ul>
+      <li>A key is issued automatically once your payment confirms, and is tied
+        to the email you gave at checkout.</li>
+      <li><strong>Keep it secret.</strong> A key is a bearer credential — whoever
+        holds it can spend your requests. We cannot tell them apart from you.</li>
+      <li>Do not publish it in a public repository, a client-side app, a shared
+        script, or a screenshot.</li>
+      <li>You may not resell, sublicense, or share your key. Every buyer needs
+        their own.</li>
+      <li>If your key leaks, tell us and we will disable it. A replacement for
+        the remaining time is at our discretion; leaking your own key is not
+        grounds for a refund.</li>
+      <li>Retrieve your keys any time from the dashboard using your email.</li>
+    </ul>
+  </section>
+
+  <section class="legal-sec" id="use">
+    <h2>4. Acceptable use</h2>
+    <p>Do not use NexAPI, directly or through anyone else, to:</p>
+    <ul>
+      <li>break any law that applies to you, to us, or to the upstream provider;</li>
+      <li>send unsolicited, bulk, harassing, or repeated messages to a person who
+        did not ask for them — including flooding a phone number with OTP or
+        verification messages, sometimes called SMS bombing;</li>
+      <li>commit fraud, impersonate someone, or bypass another service's
+        verification or security;</li>
+      <li>attack, overload, scrape, or reverse-engineer the gateway, its upstream
+        providers, or any other system;</li>
+      <li>work around request limits, expiry, or the admin panel — including
+        sharing keys or making multiple accounts to do so;</li>
+      <li>resell the raw upstream response as your own gateway service.</li>
+    </ul>
+    <div class="legal-note">
+      <p><strong>This is not a formality.</strong> Break section 4 and your key
+      is disabled without notice and without a refund. If you send messages to
+      people, having their consent is your responsibility, not ours.</p>
+    </div>
+  </section>
+
+  <section class="legal-sec" id="payments">
+    <h2>5. Payments and refunds</h2>
+    <ul>
+      <li>All prices are shown in <strong>USDT</strong> and are charged once,
+        up front. There is no auto-renewal and no recurring charge — a plan ends
+        when it ends.</li>
+      <li>Payment is processed by <strong>Heleket</strong>. Your key is issued
+        only after they confirm the payment on-chain, which normally takes a few
+        minutes.</li>
+      <li><strong>Crypto payments are final.</strong> A confirmed transaction
+        cannot be reversed by us, so purchases are non-refundable once your key
+        has been issued.</li>
+      <li>Send the exact amount to the address shown on the payment page. An
+        underpayment, a wrong network, or a transfer sent after the invoice
+        expired may be unrecoverable.</li>
+      <li>If you paid and no key arrived, contact us on Telegram with your order
+        ID within <strong>7 days</strong>. If the payment is confirmed and the
+        fault is ours, we will issue the key or refund it. That is the one case
+        where a refund applies.</li>
+      <li>Network fees charged by the blockchain are yours, not ours.</li>
+    </ul>
+  </section>
+
+  <section class="legal-sec" id="expiry">
+    <h2>6. Plan duration and expiry</h2>
+    <p>
+      Each plan runs for a fixed period that starts the moment the key is issued
+      — not when you first use it. A Lifetime plan has no expiry date; "lifetime"
+      means the lifetime of this service, not a guarantee of perpetual operation.
+    </p>
+    <p>
+      When the period ends the gateway <strong>deactivates the key
+      automatically</strong> and further calls are refused. Unused requests do
+      not roll over and are not refunded. Buy a new plan to continue.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="limits">
+    <h2>7. Request limits and fair use</h2>
+    <p>
+      A plan may carry a request limit. Every call that reaches the upstream
+      counts, whether or not the result is what you wanted — a failed OTP is
+      still a delivered request. Calls we reject before forwarding, such as an
+      invalid or expired key, do not count.
+    </p>
+    <p>
+      Once the limit is reached, the gateway answers <code>429</code> until the
+      plan renews or you buy a new one. Even on an unlimited plan we may throttle
+      or suspend traffic that threatens the stability of the gateway or its
+      upstreams.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="availability">
+    <h2>8. Availability and the upstream API</h2>
+    <p>
+      The service is provided <strong>"as is"</strong>, with no uptime guarantee
+      and no service level agreement. Figures shown on the site are targets, not
+      promises.
+    </p>
+    <p>
+      We depend on third parties. If an upstream provider goes down, changes its
+      response format, rate-limits us, or shuts off entirely, the gateway is
+      affected too, and we cannot control or fix that from our side. We also do
+      not guarantee the accuracy, delivery, or timing of anything an upstream
+      returns — for example, whether a message is actually delivered to a phone.
+    </p>
+    <p>
+      Maintenance may interrupt the service. We will keep it short where we can.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="liability">
+    <h2>9. Liability</h2>
+    <p>
+      To the fullest extent the law allows, our total liability to you for any
+      claim connected to this service is limited to <strong>the amount you paid
+      for the plan the claim relates to</strong>.
+    </p>
+    <p>
+      We are not liable for indirect or consequential loss — lost profit, lost
+      business, lost or corrupted data, downtime of your own product, or losses
+      caused by an upstream provider, by Heleket, by a blockchain network, or by
+      your own misuse of a key.
+    </p>
+    <p>
+      You are responsible for what you send through the gateway, and you agree to
+      cover us for claims that arise from your use breaking section 4 or any law.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="suspension">
+    <h2>10. Suspension and termination</h2>
+    <p>
+      We may disable a key immediately, without notice and without a refund, if
+      it is used against section 4, if it is shared or resold, if the payment
+      behind it is reversed or disputed, or if the traffic threatens the gateway
+      or its upstreams.
+    </p>
+    <p>
+      You may stop using the service at any time. Stopping does not refund the
+      remainder of a plan.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="changes">
+    <h2>11. Changes to plans and terms</h2>
+    <p>
+      We may add, change, rename, or withdraw plans and prices at any time. A
+      change never alters a plan you have already paid for — your key keeps the
+      duration and limits it was sold with.
+    </p>
+    <p>
+      These terms may change too; the date at the top changes with them, and
+      continuing to use the service after that means you accept the new version.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="law">
+    <h2>12. General</h2>
+    <p>
+      If any clause here turns out to be unenforceable, the rest stays in force.
+      Not enforcing a term once does not waive it. These terms, together with the
+      <a href="privacy.html">Privacy Policy</a>, are the whole agreement between
+      us about the service.
+    </p>
+  </section>
+
+  <section class="legal-sec legal-contact">
+    <h2>Need to talk to a human?</h2>
+    <p>Order issues, key problems, or questions about these terms.</p>
+    <a class="nx-tg" id="tg-contact" href="https://t.me/WhiteHatCeo" target="_blank" rel="noopener">Contact on Telegram</a>
+  </section>
+</main>
+
+<footer data-nx-footer></footer>
+
+<script src="config.js"></script>
+<script>
+window.NEXAPI.tgChip(document.getElementById('tg-contact'));
+</script>
+</body>
+</html>

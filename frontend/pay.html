@@ -81,6 +81,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
 .confetti-piece{position:fixed;top:0;width:8px;height:10px;border-radius:2px;opacity:0;pointer-events:none;z-index:999;animation:confetti-fall 2s ease forwards}
 @keyframes confetti-fall{0%{opacity:1;transform:translateY(-30px) rotate(0)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
 
+.nx-footer{align-self:stretch;margin:48px -20px -40px;padding-left:20px;padding-right:20px}
 @media(max-width:480px){.card{padding:32px 22px}nav{padding:14px 20px}.meta-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -144,6 +145,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
     <button class="btn-o" id="go-dash-2">Check Dashboard</button>
   </div>
 </main>
+
+<footer data-nx-footer></footer>
 
 <script src="config.js"></script>
 <script>

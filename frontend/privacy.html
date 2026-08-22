@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NexAPI — Privacy Policy</title>
+<meta name="description" content="What NexAPI collects when you buy a key, where it is stored, who it is shared with, and how to have it deleted.">
+<meta name="theme-color" content="#04060D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+.ab{animation:none}
+.ab1{width:50vw;height:50vw;background:radial-gradient(circle,rgba(99,102,241,.1) 0%,transparent 70%);top:-15vw;left:-5vw}
+.ab2{width:35vw;height:35vw;background:radial-gradient(circle,rgba(34,211,238,.07) 0%,transparent 70%);bottom:10vh;right:5vw}
+body>nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(4,6,13,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--b1)}
+body>nav .nav-r{display:flex;align-items:center;gap:10px}
+body>nav .nav-r a{color:var(--dim);font-size:.85rem;text-decoration:none;transition:all .2s;padding:8px 14px;border:1px solid var(--b1);border-radius:8px;white-space:nowrap}
+body>nav .nav-r a:hover{color:var(--txt);border-color:var(--b2)}
+@media(max-width:560px){body>nav{padding:12px 16px}body>nav .nav-r a{padding:7px 11px;font-size:.8rem}}
+</style>
+</head>
+<body>
+
+<a href="#content" class="skip-link">Skip to content</a>
+<div class="aurora" aria-hidden="true"><div class="ab ab1"></div><div class="ab ab2"></div></div>
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<nav>
+  <a href="index.html" class="logo" aria-label="NexAPI home"><div class="logo-mark" aria-hidden="true">N</div><span class="logo-text">NexAPI</span></a>
+  <div class="nav-r">
+    <a href="terms.html">Terms</a>
+    <a href="index.html">← Home</a>
+  </div>
+</nav>
+
+<main class="legal-wrap" id="content">
+  <div class="legal-eye">// Legal</div>
+  <h1>Privacy Policy</h1>
+  <div class="legal-updated">Last updated: 22 August 2026</div>
+  <p class="legal-intro">
+    NexAPI is an API gateway. You buy a plan, we issue you a key, and that key
+    lets you call an upstream API through us. This page says exactly what we
+    keep while doing that, where it lives, and how to get rid of it. We collect
+    the minimum a paid gateway needs to work — nothing is sold, rented, or used
+    for advertising.
+  </p>
+
+  <nav class="legal-toc" aria-label="On this page">
+    <div class="legal-toc-h">On this page</div>
+    <ol>
+      <li><a href="#collect">What we collect</a></li>
+      <li><a href="#why">Why we collect it</a></li>
+      <li><a href="#payments">Payments and crypto</a></li>
+      <li><a href="#storage">Where it is stored</a></li>
+      <li><a href="#sharing">Who else sees it</a></li>
+      <li><a href="#retention">How long we keep it</a></li>
+      <li><a href="#browser">Cookies and browser storage</a></li>
+      <li><a href="#rights">Your choices</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#children">Age</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+    </ol>
+  </nav>
+
+  <section class="legal-sec" id="collect">
+    <h2>1. What we collect</h2>
+    <p>Three things, and only these:</p>
+    <ul>
+      <li><strong>Your email address.</strong> You type it at checkout. It is the
+        only way to attach a key to you and the only way you can look it up
+        again on the dashboard. We do not ask for a name, address, or phone number.</li>
+      <li><strong>Your API key and its plan.</strong> The key we generate, which
+        plan it came from, when it expires, and how many requests it has used.</li>
+      <li><strong>A log line per API call.</strong> When your key calls the
+        gateway we record the time, the key, the plan, the HTTP status, how long
+        the upstream took, the IP address the request came from, and the query
+        parameters you sent us to forward.</li>
+    </ul>
+    <div class="legal-note">
+      <p><strong>Note on request parameters.</strong> Whatever you put in the
+      request — a phone number in <code>num=</code>, for example — is forwarded
+      to the upstream API and is written into that log line. Do not send us
+      personal data you are not allowed to send to a third-party API.</p>
+    </div>
+  </section>
+
+  <section class="legal-sec" id="why">
+    <h2>2. Why we collect it</h2>
+    <ul>
+      <li><strong>To deliver what you paid for</strong> — issue the key, link it
+        to your email, let you retrieve it later.</li>
+      <li><strong>To enforce the plan</strong> — expiry dates and request limits
+        cannot work without counting requests.</li>
+      <li><strong>To keep the gateway up</strong> — the logs are how we tell an
+        upstream outage from a broken key, and how we spot a key being abused or
+        shared around.</li>
+    </ul>
+    <p>We do not profile you, we do not run analytics or tracking pixels, and
+      there are no advertising scripts anywhere on this site.</p>
+  </section>
+
+  <section class="legal-sec" id="payments">
+    <h2>3. Payments and crypto</h2>
+    <p>
+      Payments are handled by <strong>Heleket</strong>, an external crypto
+      payment processor. When you click Pay, you leave this site for theirs.
+    </p>
+    <ul>
+      <li>We never see, hold, or store your wallet keys, seed phrase, or wallet balance.</li>
+      <li>We store the order ID, the plan, the amount, the status, and the email
+        you gave us — enough to match a confirmed payment to a key.</li>
+      <li>What Heleket itself collects on their page is covered by their own
+        privacy policy, not this one.</li>
+      <li>Blockchain transactions are public and permanent by design. Anything
+        visible on-chain is outside anyone's control, including ours.</li>
+    </ul>
+  </section>
+
+  <section class="legal-sec" id="storage">
+    <h2>4. Where it is stored</h2>
+    <p>
+      All of it sits in <strong>Google Cloud Firestore</strong>, in the Firebase
+      project behind this deployment, reachable only by the service account this
+      server holds. The site itself runs on <strong>Vercel</strong>. Both are
+      third-party hosts, so your data is processed on their infrastructure and
+      may sit on servers outside your country.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="sharing">
+    <h2>5. Who else sees it</h2>
+    <p>We do not sell or rent anything. Data reaches exactly these parties:</p>
+    <ul>
+      <li><strong>The upstream API provider</strong> — the parameters of each
+        call you make, because forwarding them is the service.</li>
+      <li><strong>Heleket</strong> — your email and the order amount, so a
+        payment can be matched to your key.</li>
+      <li><strong>Google Firebase and Vercel</strong> — as the hosts holding the
+        database and running the server.</li>
+      <li><strong>A lawful authority</strong>, if we are legally required to hand
+        something over.</li>
+    </ul>
+  </section>
+
+  <section class="legal-sec" id="retention">
+    <h2>6. How long we keep it</h2>
+    <ul>
+      <li><strong>Keys and their plan records</strong> stay while the key is
+        live, and afterwards as a record of the purchase.</li>
+      <li><strong>Payment records</strong> are kept as proof of the transaction.</li>
+      <li><strong>Usage logs</strong> are operational data and are pruned from
+        time to time; they are not meant to be a permanent archive.</li>
+    </ul>
+    <p>An expired key stops working immediately — the gateway deactivates it on
+      the expiry date — but its record is not automatically wiped. Ask us and we
+      will delete it.</p>
+  </section>
+
+  <section class="legal-sec" id="browser">
+    <h2>7. Cookies and browser storage</h2>
+    <p>
+      This site sets <strong>no tracking cookies</strong>. The only thing it puts
+      in your browser is your email in <code>localStorage</code>, so the checkout
+      and dashboard forms are pre-filled next time. It never leaves your device
+      except when you submit a form. Clearing your browser data removes it.
+    </p>
+    <p>
+      Fonts are loaded from Google Fonts, so Google's servers see the request
+      your browser makes for them. Nothing else on the page calls a third party.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="rights">
+    <h2>8. Your choices</h2>
+    <p>Message us on Telegram and we will, for the email you bought with:</p>
+    <ul>
+      <li>tell you what we hold,</li>
+      <li>correct an email you mistyped at checkout,</li>
+      <li>delete your keys, logs, and records.</li>
+    </ul>
+    <p>
+      Deleting your data kills any key attached to it, and a key that is deleted
+      before its plan runs out is not refunded — so ask for deletion when you are
+      finished with the service, not in the middle of a plan.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="security">
+    <h2>9. Security</h2>
+    <p>
+      Traffic runs over HTTPS. The upstream API key never leaves the server and
+      is never sent to your browser — hiding it behind your own key is the point
+      of this gateway. The admin panel is behind a secret, and database access is
+      limited to the server's service account.
+    </p>
+    <p>
+      That said, no service is perfectly secure. Treat your API key like a
+      password: anyone holding it can spend your requests, and we cannot tell
+      them apart from you.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="children">
+    <h2>10. Age</h2>
+    <p>
+      NexAPI is a developer tool and is not directed at children. Do not use it
+      if you are under 18, or under the age at which you can enter a contract
+      where you live.
+    </p>
+  </section>
+
+  <section class="legal-sec" id="changes">
+    <h2>11. Changes to this policy</h2>
+    <p>
+      If this policy changes, the date at the top changes with it. Continuing to
+      use the service after that means you accept the updated version.
+    </p>
+  </section>
+
+  <section class="legal-sec legal-contact">
+    <h2>Questions about your data?</h2>
+    <p>One channel, answered by a person.</p>
+    <a class="nx-tg" id="tg-contact" href="https://t.me/WhiteHatCeo" target="_blank" rel="noopener">Contact on Telegram</a>
+  </section>
+</main>
+
+<footer data-nx-footer></footer>
+
+<script src="config.js"></script>
+<script>
+window.NEXAPI.tgChip(document.getElementById('tg-contact'));
+</script>
+</body>
+</html>

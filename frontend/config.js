@@ -126,5 +126,60 @@ const BACKEND_URL = '';
   );
   document.head.appendChild(favicon);
 
-  window.NEXAPI = { BACKEND, ORIGIN, esc, copy, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion };
+  // ── Support contact ─────────────────────────────────────────
+  // One place to change the handle; every page reads it from here.
+  const TELEGRAM      = '@WhiteHatCeo';
+  const TELEGRAM_URL  = 'https://t.me/' + TELEGRAM.replace(/^@/, '');
+
+  const TG_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.04 15.47 8.7 20a.6.6 0 0 0 .96.2l2.3-2.2 4.77 3.5c.87.48 1.5.23 1.72-.81l3.11-14.6c.32-1.28-.46-1.86-1.3-1.55L1.9 10.2c-1.26.5-1.24 1.22-.22 1.53l4.86 1.52L17.8 6.6c.53-.33 1.02-.15.62.21z"/></svg>';
+
+  /**
+   * Fills every <footer data-nx-footer> with the shared links.
+   *
+   * Injected rather than copied into each page so the support handle and the
+   * legal links can never drift apart between pages.
+   */
+  function mountFooter() {
+    const here = location.pathname.split('/').pop() || 'index.html';
+    const links = [
+      ['index.html',     'Home'],
+      ['docs.html',      'API Docs'],
+      ['dashboard.html', 'My Keys'],
+      ['privacy.html',   'Privacy Policy'],
+      ['terms.html',     'Terms & Conditions']
+    ].filter(([href]) => href !== here);
+
+    const html =
+      `<div class="nx-foot-links">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}</div>` +
+      `<div class="nx-foot-contact">` +
+        `<a class="nx-tg" href="${TELEGRAM_URL}" target="_blank" rel="noopener">` +
+          `${TG_ICON} Support on Telegram · ${esc(TELEGRAM)}` +
+        `</a>` +
+      `</div>` +
+      `\u00a9 ${new Date().getFullYear()} NexAPI · Powered by Heleket · All payments in USDT`;
+
+    document.querySelectorAll('[data-nx-footer]').forEach(el => {
+      el.classList.add('nx-footer');
+      el.innerHTML = html;
+    });
+  }
+
+  /**
+   * Turns an <a> into the Telegram chip — icon, label, and the handle.
+   * Pages call this instead of setting textContent, which would wipe the icon.
+   */
+  function tgChip(el, label = 'Contact on Telegram') {
+    if (!el) return;
+    el.classList.add('nx-tg');
+    el.href = TELEGRAM_URL;
+    el.target = '_blank';
+    el.rel = 'noopener';
+    el.innerHTML = `${TG_ICON} ${esc(label)} · ${esc(TELEGRAM)}`;
+  }
+
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', mountFooter);
+  else mountFooter();
+
+  window.NEXAPI = { BACKEND, ORIGIN, esc, copy, copyBtn, toast, api, fmtNum, fmtDate, reducedMotion, TELEGRAM, TELEGRAM_URL, tgChip };
 })();

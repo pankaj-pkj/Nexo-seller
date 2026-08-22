@@ -120,6 +120,12 @@ h1.page-h{font-size:2.2rem;font-weight:800;letter-spacing:-1px;margin-bottom:8px
       <a href="#headers" class="sb-link">Response Headers</a>
       <a href="#plans" class="sb-link">Rate Limits</a>
     </div>
+    <div class="sb-section">
+      <div class="sb-label">Help</div>
+      <a href="https://t.me/WhiteHatCeo" class="sb-link" id="sb-tg" target="_blank" rel="noopener">Telegram Support</a>
+      <a href="privacy.html" class="sb-link">Privacy Policy</a>
+      <a href="terms.html" class="sb-link">Terms &amp; Conditions</a>
+    </div>
   </aside>
 
   <main class="content">
@@ -253,9 +259,15 @@ h1.page-h{font-size:2.2rem;font-weight:800;letter-spacing:-1px;margin-bottom:8px
   </main>
 </div>
 
+<footer data-nx-footer></footer>
+
 <script src="config.js"></script>
 <script>
-const { BACKEND, ORIGIN, esc, copyBtn, toast, api, fmtNum } = window.NEXAPI;
+const { BACKEND, ORIGIN, esc, copyBtn, toast, api, fmtNum, TELEGRAM, TELEGRAM_URL } = window.NEXAPI;
+
+const sbTg = document.getElementById('sb-tg');
+sbTg.href = TELEGRAM_URL;
+sbTg.textContent = `Telegram ${TELEGRAM}`;
 
 document.getElementById('base-url').textContent = ORIGIN;
 

@@ -71,7 +71,9 @@ default.
     ├── pay.html                    Payment status + key reveal
     ├── dashboard.html              Customer key management
     ├── admin.html                  Admin panel — stats, plans, keys
-    └── docs.html                   API documentation
+    ├── docs.html                   API documentation
+    ├── privacy.html                Privacy Policy
+    └── terms.html                  Terms and Conditions
 ```
 
 ---
@@ -368,4 +370,6 @@ service cloud.firestore {
 | Colours, fonts, spacing | `frontend/theme.css` |
 | Default seeded plans | `backend/utils/seedPlans.js`, then `npm run seed` |
 | Plan icons and gradients | `planMeta` in `frontend/index.html` |
+| Support handle (Telegram) | `TELEGRAM` in `frontend/config.js` — one place, every page reads it |
+| Footer links | `mountFooter()` in `frontend/config.js` |
 | Upstream path | `REAL_API_PATH_1` / `REAL_API_PATH_2` env vars |

@@ -158,11 +158,16 @@ h1.headline .glow-word::after{content:attr(data-text);position:absolute;left:0;t
 .how-desc{font-size:.84rem;color:var(--muted);line-height:1.7}
 .how-desc code{color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.78rem}
 
-/* ── Footer ────────────────────────────────────────────────── */
-footer{position:relative;z-index:2;padding:40px 24px;text-align:center;border-top:1px solid var(--b1);color:var(--muted);font-size:.82rem;background:rgba(4,6,13,.9)}
-footer a{color:var(--indigo);text-decoration:none}
-footer a:hover{text-decoration:underline}
-.footer-links{display:flex;gap:24px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+
+/* ── Support ───────────────────────────────────────────────── */
+.support-card{max-width:640px;margin:0 auto;background:var(--card);border:1px solid var(--b2);border-radius:24px;padding:40px 32px;text-align:center;position:relative;overflow:hidden}
+.support-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad)}
+.support-icon{font-size:2.4rem;margin-bottom:14px}
+.support-h{font-size:1.35rem;font-weight:800;letter-spacing:-.4px;margin-bottom:10px}
+.support-p{color:var(--dim);font-size:.9rem;line-height:1.8;margin-bottom:24px}
+.support-legal{margin-top:22px;font-size:.8rem;color:var(--muted)}
+.support-legal a{color:var(--indigo);text-decoration:none}
+.support-legal a:hover{text-decoration:underline}
 
 /* ── Modal ─────────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);z-index:1000;
@@ -232,6 +237,7 @@ footer a:hover{text-decoration:underline}
     <li><a href="#plans">Plans</a></li>
     <li><a href="#how">How It Works</a></li>
     <li><a href="docs.html">Docs</a></li>
+    <li><a href="#support">Support</a></li>
     <li><a href="admin.html">Admin</a></li>
   </ul>
   <div class="nav-right">
@@ -249,6 +255,9 @@ footer a:hover{text-decoration:underline}
   <a href="#how">How It Works</a>
   <a href="docs.html">API Docs</a>
   <a href="dashboard.html">My Keys</a>
+  <a href="#support">Support</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="terms.html">Terms &amp; Conditions</a>
   <a href="admin.html">Admin</a>
 </div>
 
@@ -316,16 +325,28 @@ footer a:hover{text-decoration:underline}
     <div class="how-card rv"><div class="how-num">STEP 04</div><div class="how-icon" aria-hidden="true">⚡</div><h3 class="how-title">Call the API</h3><p class="how-desc">Use <code>?key=YOUR_KEY&amp;num=…</code> on any request. We handle the rest.</p></div>
   </div>
 </section>
+
+<!-- ── Support ───────────────────────────────────────────────── -->
+<section class="section" id="support">
+  <div class="sec-head rv">
+    <div class="sec-eye">// Contact</div>
+    <h2 class="sec-title">Need Help?</h2>
+    <p class="sec-sub">Order not delivered, key not working, or a question before you buy — message us directly.</p>
+  </div>
+  <div class="support-card rv">
+    <div class="support-icon" aria-hidden="true">💬</div>
+    <div class="support-h">Talk to us on Telegram</div>
+    <p class="support-p">The fastest way to reach a human. If a payment confirmed but no key arrived, send your order ID and we will sort it out.</p>
+    <a class="nx-tg" id="tg-contact" href="https://t.me/WhiteHatCeo" target="_blank" rel="noopener">Contact on Telegram</a>
+    <div class="support-legal">
+      By buying a plan you agree to our
+      <a href="terms.html">Terms &amp; Conditions</a> and <a href="privacy.html">Privacy Policy</a>.
+    </div>
+  </div>
+</section>
 </main>
 
-<footer>
-  <div class="footer-links">
-    <a href="docs.html">API Docs</a>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="admin.html">Admin</a>
-  </div>
-  © <span id="year">2025</span> NexAPI · Powered by Heleket · All payments in USDT
-</footer>
+<footer data-nx-footer></footer>
 
 <!-- Payment Modal -->
 <div class="overlay" id="overlay">
@@ -343,14 +364,15 @@ footer a:hover{text-decoration:underline}
     <button class="m-btn" id="pay-btn">
       <span id="pay-txt">Pay with USDT →</span>
     </button>
-    <div class="m-note">🔒 Secured by Heleket · Key auto-delivered on confirmation</div>
+    <div class="m-note">🔒 Secured by Heleket · Key auto-delivered on confirmation<br>By paying you agree to the <a href="terms.html" style="color:var(--indigo)">Terms</a> and <a href="privacy.html" style="color:var(--indigo)">Privacy Policy</a>.</div>
   </div>
 </div>
 
 <script src="config.js"></script>
 <script>
 const { BACKEND, ORIGIN, esc, toast, api, reducedMotion } = window.NEXAPI;
-document.getElementById('year').textContent = new Date().getFullYear();
+
+window.NEXAPI.tgChip(document.getElementById('tg-contact'));
 
 // ── Particles ─────────────────────────────────────────────────
 // Skipped for reduced-motion users, thinned out on small screens, and paused
