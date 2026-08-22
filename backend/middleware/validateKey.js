@@ -3,6 +3,43 @@ const { db } = require('../db/firebase');
 const KEY_RE = /^NK-[0-9A-F]{8}-[0-9A-F]{8}-[0-9A-F]{8}$/i;
 
 /**
+ * Says which part of a key is wrong.
+ *
+ * A key copied by hand off a phone screen usually loses its last character, and
+ * "Malformed API key" alone gives no way to tell that from a wholly wrong value.
+ * Naming the short group turns it into an obvious re-copy.
+ */
+function describeKeyProblem(key) {
+  if (!/^NK-/i.test(key)) return 'Does not start with "NK-".';
+
+  const groups = key.slice(3).split('-');
+  if (groups.length !== 3)
+    return `Expected 3 groups separated by "-", found ${groups.length}.`;
+
+  const wrongLength = groups
+    .map((g, i) => ({ i: i + 1, g }))
+    .filter(({ g }) => g.length !== 8);
+
+  if (wrongLength.length) {
+    return wrongLength
+      .map(({ i, g }) => `Group ${i} ("${g}") has ${g.length} characters, expected 8` +
+        (g.length < 8 ? ` — looks like ${8 - g.length} character(s) got cut off while copying.` : '.'))
+      .join(' ');
+  }
+
+  const badChars = groups
+    .map((g, i) => ({ i: i + 1, bad: [...new Set(g.split('').filter(c => !/[0-9A-F]/i.test(c)))] }))
+    .filter(({ bad }) => bad.length);
+
+  if (badChars.length)
+    return badChars
+      .map(({ i, bad }) => `Group ${i} contains non-hex character(s): ${bad.join(', ')} (only 0-9 and A-F are valid).`)
+      .join(' ');
+
+  return 'Does not match the expected format.';
+}
+
+/**
  * Middleware: validates ?key=, X-API-Key, or `Authorization: Bearer …`.
  * Attaches req.keyDoc and req.keyData on success.
  */
@@ -32,7 +69,8 @@ async function validateKey(req, res, next) {
       gateway: 'NexAPI',
       error: 'Malformed API key — rejected by the NexAPI gateway, the request never reached the upstream API',
       hint: 'A key is NK- followed by three 8-character hex groups, e.g. NK-4F2A8C1D-9E7B3A2F-D6C5E4B1. Copy yours from the dashboard; do not use a placeholder.',
-      received: key.length > 60 ? `${key.slice(0, 60)}… (${key.length} chars)` : key
+      received: key.length > 60 ? `${key.slice(0, 60)}… (${key.length} chars)` : key,
+      problem: describeKeyProblem(key)
     });
   }
 
