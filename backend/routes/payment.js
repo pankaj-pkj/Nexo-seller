@@ -102,9 +102,17 @@ router.post('/create', createLimit, async (req, res) => {
     res.json({ success: true, payment_url: hRes.data.result.url, order_id: orderId });
 
   } catch (err) {
-    const msg = err.response?.data?.message || err.message;
-    console.error('[PAYMENT]', msg);
-    res.status(502).json({ success: false, error: msg });
+    // Label the source. An unattributed message like "Api not active." reads as
+    // a fault in this app or in the upstream API being resold, when it is
+    // actually the payment provider rejecting the merchant credentials.
+    const fromHeleket = Boolean(err.response?.data?.message);
+    const raw = err.response?.data?.message || err.message;
+    const msg = fromHeleket
+      ? `Heleket rejected the request: "${raw}". Check HELEKET_MERCHANT / HELEKET_API_KEY, and that API access is switched on in your Heleket dashboard.`
+      : raw;
+
+    console.error('[PAYMENT]', fromHeleket ? `heleket: ${raw}` : raw);
+    res.status(502).json({ success: false, error: msg, source: fromHeleket ? 'heleket' : 'gateway' });
   }
 });
 
