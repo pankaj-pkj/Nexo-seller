@@ -61,7 +61,8 @@ async function fulfillOrder(orderId) {
       subKey,
       planName: plan.name,
       expiresAt,
-      email: order.user_email
+      email: order.user_email,
+      orderId
     };
   });
 }

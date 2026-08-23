@@ -3,6 +3,9 @@ const router       = express.Router();
 const crypto       = require('crypto');
 const { db, identity } = require('../db/firebase');
 const rateLimit    = require('../middleware/rateLimit');
+const { getTemplate, PLACEHOLDERS } = require('../utils/emailTemplate');
+const { configured: mailConfigured } = require('../utils/mailer');
+const { sendKeyEmail } = require('../utils/keyEmail');
 
 /** Constant-time string compare — no early exit to time-probe the secret against. */
 function safeEqual(a, b) {
@@ -501,6 +504,70 @@ router.get('/logs', adminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// GET /api/admin/email-template — the key-delivery email, editable in the panel
+router.get('/email-template', adminAuth, async (req, res) => {
+  try {
+    const template = await getTemplate();
+    res.json({
+      success: true,
+      template,
+      mail_configured: mailConfigured(),
+      placeholders: PLACEHOLDERS,
+      from: process.env.MAIL_FROM || null
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/admin/email-template — save subject / body / on-off
+router.post('/email-template', adminAuth, async (req, res) => {
+  const b = req.body || {};
+  const subject   = String(b.subject || '').trim();
+  const body_html = String(b.body_html || '').trim();
+
+  if (!subject)   return res.status(400).json({ success: false, error: 'Subject is required' });
+  if (!body_html) return res.status(400).json({ success: false, error: 'Email body is required' });
+
+  try {
+    await db.collection('settings').doc('email_template').set({
+      subject,
+      body_html,
+      enabled:    b.enabled !== false,
+      updated_at: new Date()
+    });
+    console.log('[ADMIN] Email template updated');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/admin/email-template/test — send the current template to yourself
+// with sample data, so you can check it before it goes to a real customer.
+const testMailLimit = rateLimit({ windowMs: 10 * 60_000, max: 10, message: 'Too many test emails, try again shortly' });
+
+router.post('/email-template/test', adminAuth, testMailLimit, async (req, res) => {
+  const to = String(req.body?.to || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to))
+    return res.status(400).json({ success: false, error: 'Valid email required' });
+
+  if (!mailConfigured())
+    return res.status(500).json({ success: false, error: 'BREVO_API_KEY / MAIL_FROM not set in the environment' });
+
+  const outcome = await sendKeyEmail({
+    duplicate: false,
+    email:     to,
+    subKey:    'NK-TEST0000-TEST0000-TEST0000',
+    planName:  'Test Plan',
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    orderId:   'NXTEST00000000'
+  });
+
+  if (outcome.sent) res.json({ success: true, message: `Test email sent to ${to}` });
+  else res.status(502).json({ success: false, error: outcome.reason || 'Send failed' });
 });
 
 module.exports = router;

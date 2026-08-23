@@ -2,6 +2,7 @@ const axios  = require('axios');
 const { db } = require('../db/firebase');
 const { fulfillOrder } = require('./fulfillOrder');
 const { buildRequest } = require('./heleket');
+const { sendKeyEmail } = require('./keyEmail');
 
 /**
  * Safety net for the Heleket webhook.
@@ -55,8 +56,10 @@ async function checkAndFulfil(orderId) {
   if (!isPaid(status)) return { paid: false, issued: false };
 
   const result = await fulfillOrder(orderId);
-  if (!result.duplicate)
+  if (!result.duplicate) {
     console.log(`[SYNC] ✅ ${orderId} paid — issued ${result.subKey} to ${result.email}`);
+    await sendKeyEmail(result);
+  }
 
   return { paid: true, issued: !result.duplicate };
 }
@@ -93,6 +96,7 @@ async function syncPendingPayments() {
       if (!result.duplicate) {
         fulfilled++;
         console.log(`[SYNC] 🔁 Webhook missed ${orderId} — issued ${result.subKey} to ${result.email}`);
+        await sendKeyEmail(result);
       }
     } catch (err) {
       console.warn(`[SYNC] ${orderId}: ${err.message}`);

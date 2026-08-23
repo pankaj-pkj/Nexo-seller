@@ -128,6 +128,16 @@ select.issue-in option{background:#0a0f20;color:var(--txt)}
 .issue-copy:hover{background:rgba(16,185,129,.26)}
 .issue-note{color:var(--muted);font-size:.76rem;margin-top:8px}
 
+/* Email delivery */
+.mail-body{padding:22px 24px}
+.mail-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.mail-tags{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 4px}
+.mail-tag{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cyan);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:6px;padding:3px 9px;cursor:pointer;transition:all .2s}
+.mail-tag:hover{background:rgba(34,211,238,.18)}
+.mail-out{font-size:.82rem;min-height:1.2em;margin-top:12px;word-break:break-word}
+.mail-test-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid var(--b1)}
+.mail-test-row .f-in{flex:1;min-width:200px;margin:0}
+
 /* Plan breakdown */
 .breakdown{background:var(--card);border:1px solid var(--b1);border-radius:20px;padding:24px;margin-bottom:24px;animation:rise .6s ease both;display:none}
 .breakdown.show{display:block}
@@ -261,6 +271,42 @@ select.issue-in option{background:#0a0f20;color:var(--txt)}
           <button class="issue-btn" id="iss-btn">Create Key</button>
         </div>
         <div class="issue-out" id="iss-out"></div>
+      </div>
+    </section>
+
+    <!-- Email delivery -->
+    <section class="table-section">
+      <div class="ts-head">
+        <h2 class="ts-title">Key Delivery Email</h2>
+        <span class="ts-count" id="mail-badge">—</span>
+      </div>
+      <div class="mail-body">
+        <p class="issue-p">
+          Sent automatically the moment a key is issued — by Heleket's webhook, by the payment
+          page polling, or by the recovery sweep. Edit the subject and body below; changes apply
+          to the very next key issued, no redeploy needed.
+        </p>
+
+        <label class="f-check"><input type="checkbox" id="mail-enabled" checked> Send this email on every new key</label>
+
+        <label class="f-lbl" for="mail-subject">Subject</label>
+        <input type="text" id="mail-subject" class="f-in" placeholder="🔑 Your NexAPI key is ready — {{plan}} plan">
+
+        <label class="f-lbl" for="mail-body">Body (HTML)</label>
+        <textarea id="mail-body" class="f-in f-area" rows="12" placeholder="&lt;p&gt;Hi, your key is {{key}}&lt;/p&gt;"></textarea>
+
+        <div class="f-lbl" style="margin-top:16px">Insert a placeholder — tap to copy</div>
+        <div class="mail-tags" id="mail-tags"></div>
+
+        <div class="pm-err" id="mail-err" role="alert"></div>
+        <button class="m-btn" id="mail-save" style="margin-top:10px">Save Email Template</button>
+
+        <div class="mail-test-row">
+          <label for="mail-test-to" class="sr-only">Send a test email to</label>
+          <input type="email" id="mail-test-to" class="f-in" placeholder="you@example.com — send yourself a test">
+          <button class="diag-btn" id="mail-test-btn">Send Test</button>
+        </div>
+        <div class="mail-out" id="mail-out"></div>
       </div>
     </section>
 
@@ -433,7 +479,7 @@ async function loadAll(fresh = false) {
   ico.style.animation = 'spin .6s linear infinite';
   ico.style.display = 'inline-block';
   try {
-    await Promise.all([loadStats(fresh), loadPayments(), loadKeys(), loadPlans(), checkPlans()]);
+    await Promise.all([loadStats(fresh), loadPayments(), loadKeys(), loadPlans(), checkPlans(), loadMailTemplate()]);
     document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (e) {
     if (e.message !== 'Unauthorized') toast(e.message, 'err');
@@ -841,6 +887,96 @@ document.getElementById('iss-btn').addEventListener('click', async e => {
   }
   btn.disabled = false;
   btn.textContent = 'Create Key';
+});
+
+// ── Key delivery email ──────────────────────────────────────────
+let mailLoaded = false;
+
+async function loadMailTemplate() {
+  const d = await api('/api/admin/email-template');
+  if (!d.success) return;
+
+  const badge = document.getElementById('mail-badge');
+  badge.textContent = d.mail_configured ? '● sending live' : '○ not configured';
+  badge.style.color = d.mail_configured ? 'var(--green)' : 'var(--gold)';
+
+  // Only fill the form the first time — don't stomp on unsaved edits every
+  // time loadAll() refreshes (Refresh button, the 5 other panels loading).
+  if (!mailLoaded) {
+    document.getElementById('mail-enabled').checked = d.template.enabled !== false;
+    document.getElementById('mail-subject').value   = d.template.subject;
+    document.getElementById('mail-body').value      = d.template.body_html;
+
+    document.getElementById('mail-tags').innerHTML = (d.placeholders || []).map(p =>
+      `<span class="mail-tag" data-tag="{{${esc(p.tag)}}}" title="${esc(p.desc)}">{{${esc(p.tag)}}}</span>`
+    ).join('');
+    document.querySelectorAll('.mail-tag').forEach(t => t.addEventListener('click', async () => {
+      if (await copyBtn(t.dataset.tag, t, '✓')) toast(`${t.dataset.tag} copied — paste it into the subject or body`, 'ok');
+    }));
+    mailLoaded = true;
+  }
+}
+
+document.getElementById('mail-save').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  const err = document.getElementById('mail-err');
+  err.textContent = '';
+
+  const subject   = document.getElementById('mail-subject').value.trim();
+  const body_html = document.getElementById('mail-body').value.trim();
+  const enabled   = document.getElementById('mail-enabled').checked;
+
+  if (!subject)   { err.textContent = 'Subject is required'; return; }
+  if (!body_html) { err.textContent = 'Email body is required'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const d = await api('/api/admin/email-template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, body_html, enabled })
+    });
+    if (!d.success) throw new Error(d.error || 'Could not save');
+    toast('Email template saved', 'ok');
+  } catch (ex) {
+    if (ex.message !== 'Unauthorized') err.textContent = ex.message;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Email Template';
+});
+
+document.getElementById('mail-test-btn').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  const out = document.getElementById('mail-out');
+  const to  = document.getElementById('mail-test-to').value.trim();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    out.textContent = '✕ Enter a valid email';
+    out.style.color = 'var(--red)';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  out.textContent = '';
+  try {
+    const d = await api('/api/admin/email-template/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to })
+    });
+    if (!d.success) throw new Error(d.error || 'Send failed');
+    out.style.color = 'var(--green)';
+    out.textContent = `✓ ${d.message}`;
+  } catch (ex) {
+    if (ex.message !== 'Unauthorized') {
+      out.style.color = 'var(--red)';
+      out.textContent = '✕ ' + ex.message;
+    }
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send Test';
 });
 </script>
 </body>

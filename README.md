@@ -61,6 +61,10 @@ default.
 │       ├── keygen.js               NK-XXXX key generator
 │       ├── fulfillOrder.js         The one place money becomes a key
 │       ├── paymentSync.js          Recovers orders whose webhook never arrived
+│       ├── heleket.js              Heleket request signing (shared by payment.js, webhook.js, paymentSync.js)
+│       ├── mailer.js               Sends over Brevo's HTTPS API
+│       ├── emailTemplate.js        Admin-editable subject/body, with a built-in default
+│       ├── keyEmail.js             Builds the email for one issued key and sends it
 │       ├── expiry.js               Marks expired keys inactive
 │       ├── ping.js                 Render self-ping (prevents free-tier sleep)
 │       └── seedPlans.js            The 4 default plans + seeding logic
@@ -176,6 +180,9 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 | `UPSTREAM_TIMEOUT_MS` | How long to wait upstream before returning `504` (default 30000) |
 | `ADMIN_SECRET` | Admin panel password. Use something long |
 | `RENDER_URL` | Enables the 14-minute self-ping that keeps the free tier awake |
+| `BREVO_API_KEY` / `MAIL_FROM` | Sends the key-delivery email. Leave unset to skip emailing — keys still get issued |
+| `MAIL_FROM_NAME` | Display name on the email, e.g. "NexAPI" |
+| `SUPPORT_TELEGRAM_URL` | Telegram link used in the email footer |
 
 ---
 
@@ -310,8 +317,18 @@ the webhook is an optimisation, not a hard requirement.
 created. If it were the other way round and the write failed, a customer could pay against an
 order the webhook cannot find.
 
-**Signature verification.** Both directions use
-`md5(base64(json(sorted_params)) + HELEKET_API_KEY)`, compared in constant time.
+**Signature verification.** `md5(base64(bodyString) + HELEKET_API_KEY)`, over the *exact
+bytes sent or received* — `utils/heleket.js` keeps key insertion order and escapes `/` as
+`\/` to match Heleket's PHP backend, and both directions build the string once and either
+sign it or verify against it, so the signed string can never drift from the sent/received
+one. Incoming webhook signatures are compared in constant time.
+
+**Key-delivery email.** The moment a key is minted — by the webhook or by `paymentSync.js`
+— `utils/keyEmail.js` sends it out over Brevo's HTTPS API (`utils/mailer.js`). The subject
+and HTML body are admin-editable (Admin panel → **Key Delivery Email**), stored in Firestore
+at `settings/email_template`, with a built-in default so the very first sale — before anyone
+has touched that panel — still sends a working email. Unset `BREVO_API_KEY` / `MAIL_FROM`
+just skips the email; it never blocks a key from being issued.
 
 ---
 
@@ -373,3 +390,5 @@ service cloud.firestore {
 | Support handle (Telegram) | `TELEGRAM` in `frontend/config.js` — one place, every page reads it |
 | Footer links | `mountFooter()` in `frontend/config.js` |
 | Upstream path | `REAL_API_PATH_1` / `REAL_API_PATH_2` env vars |
+| Key-delivery email (subject + body) | Admin panel → **Key Delivery Email** |
+| Email sender address/name | `MAIL_FROM` / `MAIL_FROM_NAME` env vars |
