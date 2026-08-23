@@ -1,7 +1,7 @@
 const axios  = require('axios');
-const crypto = require('crypto');
 const { db } = require('../db/firebase');
 const { fulfillOrder } = require('./fulfillOrder');
+const { buildRequest } = require('./heleket');
 
 /**
  * Safety net for the Heleket webhook.
@@ -17,28 +17,18 @@ const { fulfillOrder } = require('./fulfillOrder');
 
 const isPaid = s => s === 1 || ['paid', 'paid_over', 'complete', 'completed'].includes(s);
 
-function sign(params, apiKey) {
-  const sorted = Object.keys(params).sort()
-    .reduce((a, k) => { a[k] = params[k]; return a; }, {});
-  const b64 = Buffer.from(JSON.stringify(sorted)).toString('base64');
-  return crypto.createHash('md5').update(b64 + apiKey).digest('hex');
-}
-
 /** Asks Heleket for one order's current status. Returns null if unknown. */
 async function fetchStatus(orderId) {
-  const body = { order_id: orderId };
-  const res  = await axios.post(
+  // Same signing rule as creating a payment: sign and send the identical string.
+  const { body: raw, headers } = buildRequest(
+    { order_id: orderId },
+    process.env.HELEKET_MERCHANT,
+    process.env.HELEKET_API_KEY
+  );
+  const res = await axios.post(
     `${(process.env.HELEKET_BASE_URL || 'https://api.heleket.com').replace(/\/+$/, '')}/v1/payment/info`,
-    body,
-    {
-      headers: {
-        merchant: process.env.HELEKET_MERCHANT,
-        sign:     sign(body, process.env.HELEKET_API_KEY),
-        'Content-Type': 'application/json'
-      },
-      timeout: 12_000,
-      validateStatus: () => true
-    }
+    raw,
+    { headers, timeout: 12_000, validateStatus: () => true }
   );
   return res.data?.result?.payment_status ?? res.data?.result?.status ?? null;
 }

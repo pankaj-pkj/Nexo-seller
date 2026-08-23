@@ -1,16 +1,9 @@
 const express  = require('express');
 const router   = express.Router();
 const axios    = require('axios');
-const crypto   = require('crypto');
 const { v4: uuid } = require('uuid');
 const { db, admin } = require('../db/firebase');
-
-function heleket_sign(params, apiKey) {
-  const sorted = Object.keys(params).sort()
-    .reduce((a, k) => { a[k] = params[k]; return a; }, {});
-  const b64 = Buffer.from(JSON.stringify(sorted)).toString('base64');
-  return crypto.createHash('md5').update(b64 + apiKey).digest('hex');
-}
+const { buildRequest } = require('../utils/heleket');
 
 // POST /api/payment/create — 10 invoices per IP per 10 min is plenty
 const createLimit = require('../middleware/rateLimit')({
@@ -69,22 +62,25 @@ router.post('/create', createLimit, async (req, res) => {
     });
 
     const body = {
-      amount:       Number(plan.price_usd).toString(),
-      currency:     'USDT',
+      amount:       Number(plan.price_usd).toFixed(2),
+      currency:     'USD',
       order_id:     orderId,
       url_return:   returnUrl.toString(),
       url_callback: `${process.env.BACKEND_URL.replace(/\/+$/, '')}/api/webhook`,
       comment:      `NexAPI ${plan.name} Plan`
     };
 
-    const sign = heleket_sign(body, process.env.HELEKET_API_KEY);
+    // Sign and send the SAME string. Handing axios the object instead would let
+    // it re-serialise the body (different key order, unescaped slashes) so the
+    // bytes Heleket signs wouldn't match our header — that is "Invalid Sign".
+    const { body: raw, headers } = buildRequest(body, process.env.HELEKET_MERCHANT, process.env.HELEKET_API_KEY);
 
     let hRes;
     try {
       hRes = await axios.post(
         `${process.env.HELEKET_BASE_URL.replace(/\/+$/, '')}/v1/payment`,
-        body,
-        { headers: { merchant: process.env.HELEKET_MERCHANT, sign, 'Content-Type': 'application/json' }, timeout: 15000 }
+        raw,
+        { headers, timeout: 15000 }
       );
     } catch (e) {
       await payRef.update({ status: 'failed' }).catch(() => {});
