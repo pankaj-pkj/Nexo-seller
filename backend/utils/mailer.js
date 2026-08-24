@@ -43,8 +43,24 @@ async function sendMail({ to, subject, html }) {
   } catch (err) {
     // Brevo's error body names the real problem (bad key, unverified sender
     // domain, daily cap) — surface that instead of a bare "Request failed".
-    const reason = err.response?.data?.message || err.message;
-    console.error('[MAIL]', reason);
+    const raw = err.response?.data?.message || err.message;
+
+    // Brevo blocks API calls from an IP it hasn't seen before ("Authorized
+    // IPs" security). On a serverless host the IP changes on every cold start,
+    // so this can never be whitelisted — it has to be turned off in Brevo.
+    // Give that instruction rather than the raw "unrecognised IP" text, which
+    // reads as something the app should fix. Match on the IP wording only —
+    // a wrong API key is also a 401/unauthorized, and that is NOT this.
+    const looksLikeIpBlock = /unrecognis\w*\s+ip|ip address|authoriz\w*\s+ip|\bnew IP\b/i.test(raw);
+
+    const reason = looksLikeIpBlock
+      ? 'Brevo is blocking this send because the server IP is not on its authorised-IP list. ' +
+        'A serverless host uses a new IP each time, so this must be turned OFF: in Brevo open ' +
+        'Settings → Security → Authorized IPs and disable IP authorisation (allow all IPs). ' +
+        `(Brevo said: "${raw}")`
+      : raw;
+
+    console.error('[MAIL]', raw);
     return { sent: false, reason };
   }
 }
