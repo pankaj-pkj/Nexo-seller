@@ -29,6 +29,23 @@ app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'no-referrer');
   res.set('X-Frame-Options', 'DENY');
+  // Force HTTPS for a year — stops a downgrade/MITM from ever hitting the key
+  // endpoints over plain HTTP once the site has been visited once.
+  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  // The pages are built with inline styles/scripts and Google Fonts, so those
+  // are allowed; everything else is locked to same-origin. frame-ancestors
+  // 'none' is the CSP-era clickjacking guard alongside X-Frame-Options.
+  res.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com data:",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; '));
   next();
 });
 
