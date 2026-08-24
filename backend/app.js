@@ -70,8 +70,10 @@ if (hasFrontend) {
   app.use(express.static(FRONTEND_DIR, {
     extensions: ['html'],           // /docs → docs.html
     setHeaders: (res, filePath) => {
-      // config.js and theme.css change on redeploy — never let them stick
-      if (/config\.js$|theme\.css$/.test(filePath)) res.set('Cache-Control', 'no-cache');
+      // The HTML pages and the shared config/theme all change on every redeploy.
+      // Left cacheable, a browser keeps serving the old admin panel after a
+      // deploy — which is how a fixed bug looks unfixed. Force a revalidate.
+      if (/\.html$|config\.js$|theme\.css$/.test(filePath)) res.set('Cache-Control', 'no-cache');
     }
   }));
 } else {

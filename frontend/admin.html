@@ -989,10 +989,16 @@ document.getElementById('mail-test-btn').addEventListener('click', async e => {
   btn.textContent = 'Sending…';
   out.textContent = '';
   try {
+    // Send the editor's current content so the test reflects unsaved edits.
     const d = await api('/api/admin/email-template/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to })
+      body: JSON.stringify({
+        to,
+        subject: document.getElementById('mail-subject').value.trim(),
+        body:    document.getElementById('mail-body').value.trim(),
+        mode:    document.getElementById('mail-html').checked ? 'html' : 'text'
+      })
     });
     if (!d.success) throw new Error(d.error || 'Send failed');
     out.style.color = 'var(--green)';

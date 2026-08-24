@@ -65,7 +65,21 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-db.settings({ ignoreUndefinedProperties: true });
+
+// On a serverless host (Vercel), firebase-admin's default gRPC transport opens
+// an HTTP/2 connection that the platform can freeze between invocations. The
+// next call then hangs until the function times out — and Vercel answers a
+// hung function with an HTML error page, which is why a normal-looking request
+// can come back as "Unexpected token '<'". Forcing the REST transport avoids
+// the long-lived gRPC socket entirely and is the recommended setting there.
+// Default it on under Vercel; a env var can still override it either way.
+if (process.env.FIRESTORE_PREFER_REST === undefined && process.env.VERCEL) {
+  process.env.FIRESTORE_PREFER_REST = 'true';
+}
+db.settings({
+  ignoreUndefinedProperties: true,
+  preferRest: /^(1|true|yes)$/i.test(process.env.FIRESTORE_PREFER_REST || '')
+});
 
 /**
  * Which project and identity we are actually talking to.

@@ -3,9 +3,8 @@ const router       = express.Router();
 const crypto       = require('crypto');
 const { db, identity } = require('../db/firebase');
 const rateLimit    = require('../middleware/rateLimit');
-const { getTemplate, PLACEHOLDERS } = require('../utils/emailTemplate');
-const { configured: mailConfigured } = require('../utils/mailer');
-const { sendKeyEmail } = require('../utils/keyEmail');
+const { getTemplate, renderEmail, PLACEHOLDERS } = require('../utils/emailTemplate');
+const { configured: mailConfigured, sendMail } = require('../utils/mailer');
 
 /** Constant-time string compare — no early exit to time-probe the secret against. */
 function safeEqual(a, b) {
@@ -550,29 +549,51 @@ router.post('/email-template', adminAuth, async (req, res) => {
   }
 });
 
-// POST /api/admin/email-template/test — send the current template to yourself
-// with sample data, so you can check it before it goes to a real customer.
+// POST /api/admin/email-template/test — send a sample email to yourself.
+// Renders straight from the subject/body in the request (what's in the editor
+// right now) so you can test BEFORE saving, and so the test never depends on a
+// Firestore read — one less thing that can hang on a serverless cold start.
 const testMailLimit = rateLimit({ windowMs: 10 * 60_000, max: 10, message: 'Too many test emails, try again shortly' });
 
 router.post('/email-template/test', adminAuth, testMailLimit, async (req, res) => {
-  const to = String(req.body?.to || '').trim();
+  const b  = req.body || {};
+  const to = String(b.to || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to))
     return res.status(400).json({ success: false, error: 'Valid email required' });
 
   if (!mailConfigured())
     return res.status(500).json({ success: false, error: 'BREVO_API_KEY / MAIL_FROM not set in the environment' });
 
-  const outcome = await sendKeyEmail({
-    duplicate: false,
-    email:     to,
-    subKey:    'NK-TEST0000-TEST0000-TEST0000',
-    planName:  'Test Plan',
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    orderId:   'NXTEST00000000'
-  });
+  const base = (process.env.BACKEND_URL || '').replace(/\/+$/, '');
+  const vars = {
+    email:         to,
+    key:           'NK-TEST0000-TEST0000-TEST0000',
+    plan:          'Test Plan',
+    expires:       new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString(),
+    order_id:      'NXTEST00000000',
+    dashboard_url: `${base}/dashboard.html`,
+    docs_url:      `${base}/docs.html`,
+    support_url:   process.env.SUPPORT_TELEGRAM_URL || 'https://t.me/WhiteHatCeo'
+  };
 
-  if (outcome.sent) res.json({ success: true, message: `Test email sent to ${to}` });
-  else res.status(502).json({ success: false, error: outcome.reason || 'Send failed' });
+  // Use the editor's current content if sent; otherwise fall back to whatever
+  // is saved. Either way this is a pure render + one Brevo call, never HTML.
+  let tpl;
+  if (b.subject && b.body) {
+    tpl = { subject: String(b.subject), body: String(b.body), mode: b.mode === 'html' ? 'html' : 'text' };
+  } else {
+    tpl = await getTemplate();
+  }
+
+  try {
+    const { subject, html } = renderEmail(tpl, vars);
+    const outcome = await sendMail({ to, subject, html });
+    if (outcome.sent) return res.json({ success: true, message: `Test email sent to ${to}` });
+    return res.status(502).json({ success: false, error: outcome.reason || 'Send failed' });
+  } catch (err) {
+    console.error('[ADMIN/mail-test]', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;
