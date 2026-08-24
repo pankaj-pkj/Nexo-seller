@@ -522,23 +522,28 @@ router.get('/email-template', adminAuth, async (req, res) => {
   }
 });
 
-// POST /api/admin/email-template — save subject / body / on-off
+// POST /api/admin/email-template — save subject / body / mode / on-off
 router.post('/email-template', adminAuth, async (req, res) => {
   const b = req.body || {};
-  const subject   = String(b.subject || '').trim();
-  const body_html = String(b.body_html || '').trim();
+  const subject = String(b.subject || '').trim();
+  // Accept `body` (new) and fall back to `body_html` (old field name).
+  const body    = String(b.body ?? b.body_html ?? '').trim();
+  const mode    = b.mode === 'html' ? 'html' : 'text';
 
-  if (!subject)   return res.status(400).json({ success: false, error: 'Subject is required' });
-  if (!body_html) return res.status(400).json({ success: false, error: 'Email body is required' });
+  if (!subject) return res.status(400).json({ success: false, error: 'Subject is required' });
+  if (!body)    return res.status(400).json({ success: false, error: 'Message body is required' });
 
   try {
+    // Overwrite the whole doc (not merge) so a stale body_html from an older
+    // save can't linger and shadow the new `body` field on read.
     await db.collection('settings').doc('email_template').set({
       subject,
-      body_html,
+      body,
+      mode,
       enabled:    b.enabled !== false,
       updated_at: new Date()
     });
-    console.log('[ADMIN] Email template updated');
+    console.log(`[ADMIN] Email template updated (${mode} mode)`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

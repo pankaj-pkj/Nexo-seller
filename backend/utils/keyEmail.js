@@ -1,13 +1,5 @@
 const { sendMail } = require('./mailer');
-const { getTemplate, render } = require('./emailTemplate');
-
-/** Escape values that land inside the HTML template — the key and plan name
- *  are generated/admin-set, but the email address is customer input. */
-function esc(v) {
-  return String(v ?? '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
+const { getTemplate, renderEmail } = require('./emailTemplate');
 
 /**
  * Sends the "your key is ready" email for one fulfilled order.
@@ -27,23 +19,21 @@ async function sendKeyEmail(result) {
     const tpl = await getTemplate();
     if (!tpl.enabled) return { sent: false, skipped: true };
 
+    // Raw values — emailTemplate escapes them at render time, per output mode.
     const base = (process.env.BACKEND_URL || '').replace(/\/+$/, '');
     const vars = {
-      email:         esc(result.email),
-      key:           esc(result.subKey),
-      plan:          esc(result.planName),
+      email:         result.email,
+      key:           result.subKey,
+      plan:          result.planName,
       expires:       result.expiresAt ? new Date(result.expiresAt).toDateString() : 'Never (Lifetime)',
-      order_id:      esc(result.orderId || ''),
+      order_id:      result.orderId || '',
       dashboard_url: `${base}/dashboard.html`,
       docs_url:      `${base}/docs.html`,
       support_url:   process.env.SUPPORT_TELEGRAM_URL || 'https://t.me/WhiteHatCeo'
     };
 
-    const outcome = await sendMail({
-      to:      result.email,
-      subject: render(tpl.subject, vars),
-      html:    render(tpl.body_html, vars)
-    });
+    const { subject, html } = renderEmail(tpl, vars);
+    const outcome = await sendMail({ to: result.email, subject, html });
 
     if (outcome.sent) console.log(`[MAIL] Key email sent to ${result.email}`);
     else if (!outcome.reason?.includes('not configured'))

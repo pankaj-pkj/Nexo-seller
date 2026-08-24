@@ -134,6 +134,7 @@ select.issue-in option{background:#0a0f20;color:var(--txt)}
 .mail-tags{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 4px}
 .mail-tag{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cyan);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:6px;padding:3px 9px;cursor:pointer;transition:all .2s}
 .mail-tag:hover{background:rgba(34,211,238,.18)}
+.mail-hint{font-size:.78rem;color:var(--muted);line-height:1.7;margin-bottom:10px;max-width:640px}
 .mail-out{font-size:.82rem;min-height:1.2em;margin-top:12px;word-break:break-word}
 .mail-test-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid var(--b1)}
 .mail-test-row .f-in{flex:1;min-width:200px;margin:0}
@@ -292,11 +293,15 @@ select.issue-in option{background:#0a0f20;color:var(--txt)}
         <label class="f-lbl" for="mail-subject">Subject</label>
         <input type="text" id="mail-subject" class="f-in" placeholder="🔑 Your NexAPI key is ready — {{plan}} plan">
 
-        <label class="f-lbl" for="mail-body">Body (HTML)</label>
-        <textarea id="mail-body" class="f-in f-area" rows="12" placeholder="&lt;p&gt;Hi, your key is {{key}}&lt;/p&gt;"></textarea>
+        <label class="f-lbl" for="mail-body" id="mail-body-lbl">Message</label>
+        <p class="mail-hint" id="mail-hint">Just write your message in plain text. Use the tags below wherever you want the key,
+          plan, date, etc. — they get filled in automatically. We wrap it in a clean branded email for you.</p>
+        <textarea id="mail-body" class="f-in f-area" rows="12" placeholder="Hi, your API key is {{key}} …"></textarea>
 
-        <div class="f-lbl" style="margin-top:16px">Insert a placeholder — tap to copy</div>
+        <div class="f-lbl" style="margin-top:16px">Tap a tag to copy, then paste it into your message</div>
         <div class="mail-tags" id="mail-tags"></div>
+
+        <label class="f-check" style="margin-top:16px"><input type="checkbox" id="mail-html"> Advanced: write raw HTML instead of plain text</label>
 
         <div class="pm-err" id="mail-err" role="alert"></div>
         <button class="m-btn" id="mail-save" style="margin-top:10px">Save Email Template</button>
@@ -468,7 +473,18 @@ if (TOKEN) showAdmin();
 async function api(path, opts = {}) {
   const r = await fetch(`${BACKEND}${path}`, { ...opts, headers: { 'x-admin-token': TOKEN, ...(opts.headers || {}) } });
   if (r.status === 403) { toast('Session expired — please log in again', 'err'); setTimeout(logout, 1200); throw new Error('Unauthorized'); }
-  return r.json();
+
+  // A non-JSON body here is almost always the platform, not us: a redeploy
+  // still in progress, or a serverless cold-start hiccup returning an HTML
+  // error page. "Unexpected token '<'" from a raw .json() hides that; say it
+  // plainly and name the retry.
+  try {
+    return await r.json();
+  } catch {
+    if (r.status >= 500)
+      throw new Error(`Server returned ${r.status} (not JSON). If you just redeployed, wait ~30s and hit Refresh — the deploy may still be finishing.`);
+    throw new Error(`Got a non-JSON response from ${BACKEND || 'this site'}${path} (HTTP ${r.status}). Try Refresh in a moment.`);
+  }
 }
 
 // ── Loading ───────────────────────────────────────────────────
@@ -892,6 +908,14 @@ document.getElementById('iss-btn').addEventListener('click', async e => {
 // ── Key delivery email ──────────────────────────────────────────
 let mailLoaded = false;
 
+/** Swaps the body label/hint between plain-text and raw-HTML wording. */
+function applyMailMode(isHtml) {
+  document.getElementById('mail-body-lbl').textContent = isHtml ? 'HTML body' : 'Message';
+  document.getElementById('mail-hint').style.display = isHtml ? 'none' : '';
+}
+
+document.getElementById('mail-html').addEventListener('change', e => applyMailMode(e.currentTarget.checked));
+
 async function loadMailTemplate() {
   const d = await api('/api/admin/email-template');
   if (!d.success) return;
@@ -903,15 +927,18 @@ async function loadMailTemplate() {
   // Only fill the form the first time — don't stomp on unsaved edits every
   // time loadAll() refreshes (Refresh button, the 5 other panels loading).
   if (!mailLoaded) {
+    const isHtml = d.template.mode === 'html';
     document.getElementById('mail-enabled').checked = d.template.enabled !== false;
-    document.getElementById('mail-subject').value   = d.template.subject;
-    document.getElementById('mail-body').value      = d.template.body_html;
+    document.getElementById('mail-html').checked     = isHtml;
+    document.getElementById('mail-subject').value    = d.template.subject;
+    document.getElementById('mail-body').value       = d.template.body;
+    applyMailMode(isHtml);
 
     document.getElementById('mail-tags').innerHTML = (d.placeholders || []).map(p =>
       `<span class="mail-tag" data-tag="{{${esc(p.tag)}}}" title="${esc(p.desc)}">{{${esc(p.tag)}}}</span>`
     ).join('');
     document.querySelectorAll('.mail-tag').forEach(t => t.addEventListener('click', async () => {
-      if (await copyBtn(t.dataset.tag, t, '✓')) toast(`${t.dataset.tag} copied — paste it into the subject or body`, 'ok');
+      if (await copyBtn(t.dataset.tag, t, '✓')) toast(`${t.dataset.tag} copied — paste it into your message`, 'ok');
     }));
     mailLoaded = true;
   }
@@ -922,12 +949,13 @@ document.getElementById('mail-save').addEventListener('click', async e => {
   const err = document.getElementById('mail-err');
   err.textContent = '';
 
-  const subject   = document.getElementById('mail-subject').value.trim();
-  const body_html = document.getElementById('mail-body').value.trim();
-  const enabled   = document.getElementById('mail-enabled').checked;
+  const subject = document.getElementById('mail-subject').value.trim();
+  const body    = document.getElementById('mail-body').value.trim();
+  const enabled = document.getElementById('mail-enabled').checked;
+  const mode    = document.getElementById('mail-html').checked ? 'html' : 'text';
 
-  if (!subject)   { err.textContent = 'Subject is required'; return; }
-  if (!body_html) { err.textContent = 'Email body is required'; return; }
+  if (!subject) { err.textContent = 'Subject is required'; return; }
+  if (!body)    { err.textContent = 'Message body is required'; return; }
 
   btn.disabled = true;
   btn.textContent = 'Saving…';
@@ -935,7 +963,7 @@ document.getElementById('mail-save').addEventListener('click', async e => {
     const d = await api('/api/admin/email-template', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, body_html, enabled })
+      body: JSON.stringify({ subject, body, mode, enabled })
     });
     if (!d.success) throw new Error(d.error || 'Could not save');
     toast('Email template saved', 'ok');
