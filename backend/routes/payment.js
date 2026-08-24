@@ -135,9 +135,27 @@ router.get('/status/:orderId', statusLimit, async (req, res) => {
     const payDoc = await db.collection('payments').doc(orderId).get();
     if (!payDoc.exists) return res.status(404).json({ success: false, error: 'Order not found' });
 
+    // The key minted for THIS order. The order id (NX + 14 hex) is unguessable
+    // and only the buyer who started the payment has it, so it's the capability
+    // that authorises revealing the key here — the dashboard, by contrast, has
+    // no such token and must prove ownership with the key itself.
+    async function keyForOrder() {
+      const ks = await db.collection('api_keys').where('payment_id', '==', orderId).limit(1).get();
+      if (ks.empty) return null;
+      const d = ks.docs[0].data();
+      const exp = d.expires_at?.toDate?.() || (d.expires_at ? new Date(d.expires_at) : null);
+      return {
+        sub_key:        d.sub_key,
+        plan_name:      d.plan_name,
+        requests_limit: d.requests_limit ?? null,
+        expires_at:     exp ? exp.toISOString() : null,
+        is_lifetime:    !exp
+      };
+    }
+
     const order = payDoc.data();
     if (order.status === 'paid')
-      return res.json({ success: true, status: 'paid', already: true });
+      return res.json({ success: true, status: 'paid', already: true, key: await keyForOrder() });
 
     // Still pending locally — ask Heleket whether that is still true
     const { checkAndFulfil } = require('../utils/paymentSync');
@@ -146,7 +164,8 @@ router.get('/status/:orderId', statusLimit, async (req, res) => {
     res.json({
       success: true,
       status:  result.paid ? 'paid' : (order.status || 'pending'),
-      issued:  Boolean(result.issued)
+      issued:  Boolean(result.issued),
+      key:     result.paid ? await keyForOrder() : undefined
     });
   } catch (err) {
     console.error('[PAYMENT/status]', err.message);

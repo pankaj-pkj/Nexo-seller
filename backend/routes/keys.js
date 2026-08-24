@@ -4,11 +4,39 @@ const { db }   = require('../db/firebase');
 const rateLimit = require('../middleware/rateLimit');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const KEY_RE   = /^NK-[0-9A-F]{8}-[0-9A-F]{8}-[0-9A-F]{8}$/i;
 
-// These are public (the dashboard calls them with no auth), so throttle them.
+// These are public (the dashboard calls them with no login), so throttle them.
 const publicLimit = rateLimit({ windowMs: 60_000, max: 60, message: 'Slow down' });
 
-// GET /api/key/check/:subkey — declared before /:email so it always wins
+/** Public, safe view of one key document. Never echoes internal fields. */
+function shapeKey(id, data) {
+  const exp = data.expires_at
+    ? (data.expires_at.toDate ? data.expires_at.toDate() : new Date(data.expires_at))
+    : null;
+  const now = new Date();
+  return {
+    id,
+    sub_key:        data.sub_key,
+    user_email:     data.user_email,
+    plan_id:        data.plan_id,
+    plan_name:      data.plan_name,
+    plan_color:     data.plan_color,
+    is_active:      Boolean(data.is_active),
+    requests_used:  data.requests_used || 0,
+    requests_limit: data.requests_limit ?? null,
+    payment_id:     data.payment_id,
+    expires_at:     exp ? exp.toISOString() : null,
+    created_at:     data.created_at?.toDate?.()?.toISOString() || null,
+    last_used:      data.last_used?.toDate?.()?.toISOString() || null,
+    is_expired:     exp ? exp < now : false,
+    days_left:      exp ? Math.max(0, Math.ceil((exp - now) / 86400000)) : null,
+    is_lifetime:    !exp
+  };
+}
+
+// GET /api/key/check/:subkey — status of ONE key. Safe by design: you have to
+// know the key itself, so there is nothing to enumerate.
 router.get('/check/:subkey', publicLimit, async (req, res) => {
   try {
     const snap = await db.collection('api_keys')
@@ -35,52 +63,43 @@ router.get('/check/:subkey', publicLimit, async (req, res) => {
   }
 });
 
-// GET /api/key/:email — every key bought with that email
-router.get('/:email', publicLimit, async (req, res) => {
-  const email = decodeURIComponent(req.params.email).toLowerCase().trim();
-  if (!EMAIL_RE.test(email))
-    return res.status(400).json({ success: false, error: 'Invalid email' });
+/**
+ * POST /api/key/lookup  { email, key }
+ *
+ * Retrieves every key on an account — but only for someone who can prove they
+ * own it, by supplying one working key that belongs to that email. Without this
+ * proof anyone could enter any email and walk away with that customer's live
+ * keys, so the old GET /:email (email only) was removed.
+ *
+ * The mismatch and not-found cases return the SAME generic message so this
+ * can't be used to test which emails or keys exist.
+ */
+router.post('/lookup', publicLimit, async (req, res) => {
+  const email = String(req.body?.email || '').toLowerCase().trim();
+  const key   = String(req.body?.key || '').toUpperCase().trim();
+
+  if (!EMAIL_RE.test(email) || !KEY_RE.test(key))
+    return res.status(400).json({ success: false, error: 'Enter a valid email and a valid key (NK-…).' });
+
+  const MISMATCH = { success: false, error: 'That email and key do not match. Check both, or use the key from your purchase email.' };
 
   try {
-    // Equality filter only, then sort in JS. Adding .orderBy('created_at') here
-    // would require a hand-built composite index; one customer has a handful of
-    // keys, so sorting them in memory costs nothing and keeps setup index-free.
     const snap = await db.collection('api_keys')
-      .where('user_email', '==', email)
-      .get();
+      .where('sub_key', '==', key)
+      .limit(1).get();
 
-    const now  = new Date();
-    const keys = snap.docs.map(d => {
-      const data = d.data();
-      const exp  = data.expires_at
-        ? (data.expires_at.toDate ? data.expires_at.toDate() : new Date(data.expires_at))
-        : null;
-      // Explicit allow-list — never echo back internal fields we add later
-      return {
-        id:             d.id,
-        sub_key:        data.sub_key,
-        user_email:     data.user_email,
-        plan_id:        data.plan_id,
-        plan_name:      data.plan_name,
-        plan_color:     data.plan_color,
-        is_active:      Boolean(data.is_active),
-        requests_used:  data.requests_used || 0,
-        requests_limit: data.requests_limit ?? null,
-        payment_id:     data.payment_id,
-        expires_at:     exp ? exp.toISOString() : null,
-        created_at:     data.created_at?.toDate?.()?.toISOString() || null,
-        last_used:      data.last_used?.toDate?.()?.toISOString() || null,
-        is_expired:     exp ? exp < now : false,
-        days_left:      exp ? Math.max(0, Math.ceil((exp - now) / 86400000)) : null,
-        is_lifetime:    !exp
-      };
-    });
+    // Key unknown, or it belongs to a different email → same answer either way.
+    if (snap.empty || (snap.docs[0].data().user_email || '').toLowerCase() !== email)
+      return res.status(401).json(MISMATCH);
 
-    keys.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    // Ownership proven — return the whole account's keys.
+    const all = await db.collection('api_keys').where('user_email', '==', email).get();
+    const keys = all.docs.map(d => shapeKey(d.id, d.data()))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     res.json({ success: true, count: keys.length, keys });
   } catch (err) {
-    console.error('[KEYS]', err.message);
+    console.error('[KEYS/lookup]', err.message);
     res.status(500).json({ success: false, error: 'Could not load keys' });
   }
 });

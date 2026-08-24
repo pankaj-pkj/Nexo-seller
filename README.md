@@ -53,7 +53,7 @@ default.
 │   │   ├── plans.js                GET  /api/plans
 │   │   ├── payment.js              POST /api/payment/create, GET /status/:orderId
 │   │   ├── webhook.js              POST /api/webhook  (Heleket callback)
-│   │   ├── keys.js                 GET  /api/key/:email, /api/key/check/:subkey
+│   │   ├── keys.js                 POST /api/key/lookup (email+key), GET /api/key/check/:subkey
 │   │   ├── proxy.js                GET  /admin/paid/key  ← MAIN GATEWAY
 │   │   ├── admin.js                 /api/admin/* — stats, keys, plans CRUD, seed
 │   │   └── cron.js                 /api/cron/* — for Vercel Cron
@@ -196,7 +196,7 @@ See `backend/.env.example` for the annotated list. The ones worth calling out:
 | GET | `/api/plans` | Active plans |
 | POST | `/api/payment/create` | `{plan_id, email}` → Heleket payment URL |
 | POST | `/api/webhook` | Heleket callback → mints the sub-key |
-| GET | `/api/key/:email` | All keys for an email |
+| POST | `/api/key/lookup` | `{email, key}` → all keys for that email, only if the key proves ownership |
 | GET | `/api/key/check/:subkey` | Validity check, does not consume a request |
 | **GET** | **`/admin/paid/key`** | **Main gateway — validates, proxies, meters** |
 
@@ -354,6 +354,11 @@ that order directly and issues the key the moment it reads paid.
 
 - Real upstream keys live only in host environment variables — never in code, never in
   Firestore, and never in a response the customer can see.
+- Retrieving keys needs proof of ownership: `/api/key/lookup` requires the email **and** a
+  working key for it, so knowing only an email reveals nothing. The post-payment reveal on
+  `pay.html` uses the order id (unguessable) as its capability instead.
+- HSTS and a same-origin Content-Security-Policy are sent on every response, alongside
+  nosniff / Referrer-Policy / X-Frame-Options.
 - Admin auth compares the token in constant time and throttles login to 8 tries / 5 min / IP.
 - Webhook signatures are verified before anything is written.
 - The frontend has no database access; everything goes through the backend.

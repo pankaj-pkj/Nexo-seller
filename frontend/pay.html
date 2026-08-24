@@ -188,21 +188,15 @@ async function check() {
   // Nudge the backend to ask Heleket about this order directly. That is what
   // makes the key arrive without a working webhook — and on serverless hosts,
   // where nothing can poll in the background, it is the only thing that does.
+  // Nudge the backend to confirm with Heleket, and take the key straight from
+  // its reply. The order id is the buyer's proof of ownership, so the status
+  // endpoint returns the key for this order directly — no unauthenticated
+  // lookup-by-email is involved.
   if (orderId) {
-    try { await api(`/api/payment/status/${encodeURIComponent(orderId)}`); }
-    catch (e) { console.warn('[pay] status check:', e.message); }
-  }
-
-  try {
-    const d = await api(`/api/key/${encodeURIComponent(email)}`);
-    if (d.success && d.keys?.length) {
-      // Match this order when we can, so an existing older key isn't mistaken
-      // for the one that was just bought.
-      const key = orderId ? d.keys.find(k => k.payment_id === orderId) : d.keys[0];
-      if (key) return succeed(key);
-    }
-  } catch (e) {
-    console.warn('[pay] check failed:', e.message);
+    try {
+      const d = await api(`/api/payment/status/${encodeURIComponent(orderId)}`);
+      if (d.success && d.status === 'paid' && d.key) return succeed(d.key);
+    } catch (e) { console.warn('[pay] status check:', e.message); }
   }
 
   if (attempts >= MAX)

@@ -135,11 +135,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
 <div class="page" id="main">
   <section class="lookup">
     <h1 class="lk-h">My API Keys</h1>
-    <p class="lk-s">Enter the email you used at checkout to retrieve your keys.</p>
+    <p class="lk-s">Enter your checkout email and one of your API keys to unlock your account. The key is in your purchase email.</p>
     <div class="lk-row">
       <label for="em-in" class="sr-only">Email address</label>
       <input type="email" id="em-in" class="lk-in" placeholder="you@example.com" autocomplete="email" inputmode="email">
-      <button class="lk-btn" id="lk-btn"><span id="lk-txt">Look Up</span></button>
+    </div>
+    <div class="lk-row" style="margin-top:12px">
+      <label for="key-in" class="sr-only">Your API key</label>
+      <input type="text" id="key-in" class="lk-in" placeholder="NK-XXXXXXXX-XXXXXXXX-XXXXXXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="lk-btn" id="lk-btn"><span id="lk-txt">Unlock</span></button>
     </div>
     <div class="err" id="err" role="alert"></div>
   </section>
@@ -170,32 +174,46 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
 const { BACKEND, ORIGIN, esc, copyBtn, toast, api, fmtNum, fmtDate } = window.NEXAPI;
 
 const emailIn = document.getElementById('em-in');
+const keyIn   = document.getElementById('key-in');
 const errBox  = document.getElementById('err');
 const results = document.getElementById('results');
 const summary = document.getElementById('summary');
+
+const KEY_RE = /^NK-[0-9A-F]{8}-[0-9A-F]{8}-[0-9A-F]{8}$/i;
 
 // Countdown timers are tracked so a second lookup doesn't leave the previous
 // render's intervals running against DOM nodes that no longer exist.
 let timers = [];
 const clearTimers = () => { timers.forEach(clearInterval); timers = []; };
 
-// Prefill from ?email=, then from whatever was used to buy on this device
+// Prefill the email from ?email= or this device's last purchase. The key is a
+// secret and is never stored, so it always has to be entered — that is what
+// stops anyone from pulling another person's keys with just their email.
 const paramEmail = new URLSearchParams(location.search).get('email');
-const saved      = paramEmail || localStorage.getItem('nexapi_email');
-if (saved) { emailIn.value = saved; setTimeout(lookup, 400); }
+const savedEmail = paramEmail || localStorage.getItem('nexapi_email');
+if (savedEmail) emailIn.value = savedEmail;
 
 document.getElementById('lk-btn').addEventListener('click', lookup);
-emailIn.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+emailIn.addEventListener('keydown', e => { if (e.key === 'Enter') keyIn.focus(); });
+keyIn.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
 
 async function lookup() {
   const email = emailIn.value.trim().toLowerCase();
+  const key   = keyIn.value.trim().toUpperCase();
   errBox.classList.remove('show');
   emailIn.classList.remove('invalid');
+  keyIn.classList.remove('invalid');
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errBox.textContent = 'Please enter a valid email address.';
     errBox.classList.add('show');
     emailIn.classList.add('invalid');
+    return;
+  }
+  if (!KEY_RE.test(key)) {
+    errBox.textContent = 'Enter one of your API keys (looks like NK-XXXXXXXX-XXXXXXXX-XXXXXXXX).';
+    errBox.classList.add('show');
+    keyIn.classList.add('invalid');
     return;
   }
 
@@ -204,7 +222,11 @@ async function lookup() {
   txt.innerHTML = '<span class="spin"></span>';
 
   try {
-    const d = await api(`/api/key/${encodeURIComponent(email)}`);
+    const d = await api('/api/key/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, key })
+    });
     if (!d.success) throw new Error(d.error || 'Lookup failed');
     localStorage.setItem('nexapi_email', email);
     renderKeys(d.keys, email);
@@ -217,7 +239,7 @@ async function lookup() {
     document.getElementById('docs').classList.remove('show');
   } finally {
     btn.disabled = false;
-    txt.textContent = 'Look Up';
+    txt.textContent = 'Unlock';
   }
 }
 
