@@ -1,10 +1,5 @@
 /**
  * The Express app, with no server and no background timers.
- *
- * Kept separate from server.js so it can run in both worlds:
- *   • server.js  — long-lived Node process (Render), adds cron + polling
- *   • api/index.js — Vercel serverless function, which must not start timers
- *     because the process is frozen between requests
  */
 require('dotenv').config();
 const express = require('express');
@@ -14,7 +9,6 @@ const fs      = require('fs');
 
 const app = express();
 
-// Both hosts sit behind a proxy — needed for a correct req.ip
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
@@ -29,12 +23,7 @@ app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'no-referrer');
   res.set('X-Frame-Options', 'DENY');
-  // Force HTTPS for a year — stops a downgrade/MITM from ever hitting the key
-  // endpoints over plain HTTP once the site has been visited once.
   res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  // The pages are built with inline styles/scripts and Google Fonts, so those
-  // are allowed; everything else is locked to same-origin. frame-ancestors
-  // 'none' is the CSP-era clickjacking guard alongside X-Frame-Options.
   res.set('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
@@ -49,7 +38,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Request logging (skips health so logs stay readable) ─────
+// ── Request logging ──────────────────────────────────────────
 app.use((req, res, next) => {
   if (req.path === '/health') return next();
   const started = Date.now();
@@ -65,8 +54,9 @@ app.use('/api/payment', require('./routes/payment'));
 app.use('/api/webhook', require('./routes/webhook'));
 app.use('/api/key',     require('./routes/keys'));
 app.use('/api/admin',   require('./routes/admin'));
-app.use('/api/cron',    require('./routes/cron'));    // for Vercel Cron
-app.use('/admin',       require('./routes/proxy'));   // /admin/paid/key
+app.use('/api/cron',    require('./routes/cron'));
+app.use('/admin',       require('./routes/proxy'));
+app.use('/api',         require('./routes/proxy'));
 
 // ── Health ────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({
@@ -78,18 +68,13 @@ app.get('/health', (req, res) => res.json({
 }));
 
 // ── Frontend ──────────────────────────────────────────────────
-// The app serves frontend/ itself, so backend and frontend deploy as one unit
-// on both Render and Vercel — no separate static host, no cross-origin config.
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 const hasFrontend  = fs.existsSync(path.join(FRONTEND_DIR, 'index.html'));
 
 if (hasFrontend) {
   app.use(express.static(FRONTEND_DIR, {
-    extensions: ['html'],           // /docs → docs.html
+    extensions: ['html'],
     setHeaders: (res, filePath) => {
-      // The HTML pages and the shared config/theme all change on every redeploy.
-      // Left cacheable, a browser keeps serving the old admin panel after a
-      // deploy — which is how a fixed bug looks unfixed. Force a revalidate.
       if (/\.html$|config\.js$|theme\.css$/.test(filePath)) res.set('Cache-Control', 'no-cache');
     }
   }));
@@ -103,15 +88,14 @@ if (hasFrontend) {
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use((req, res) => {
-  // Browsers asking for a page get a page; API clients get JSON
   if (hasFrontend && req.method === 'GET' && (req.headers.accept || '').includes('text/html'))
     return res.status(404).sendFile(path.join(FRONTEND_DIR, 'index.html'));
 
   res.status(404).json({ success: false, error: 'Not found', path: req.originalUrl });
 });
 
-// ── Error handler (last resort — never leak a stack trace) ────
-app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
+// ── Error handler ────────────────────────────────────────────
+app.use((err, req, res, next) => {
   console.error('[ERROR]', err.message);
   if (res.headersSent) return;
   res.status(err.status || 500).json({ success: false, error: 'Internal server error' });
